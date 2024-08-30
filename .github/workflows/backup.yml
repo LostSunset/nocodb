@@ -7,7 +7,7 @@ on:
 
 env:
   UPSTREAM_REPO: ${{ vars.UPSTREAM_REPO || 'https://github.com/nocodb/nocodb.git' }}
-  MAIN_BRANCH: ${{ vars.MAIN_BRANCH || 'master' }}
+  MAIN_BRANCH: ${{ vars.MAIN_BRANCH || 'develop' }}
 
 jobs:
   backup-and-sync:
