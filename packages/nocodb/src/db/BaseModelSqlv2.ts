@@ -5,7 +5,6 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone';
 import equal from 'fast-deep-equal';
-import { nocoExecute } from 'nc-help';
 import {
   AuditOperationSubTypes,
   AuditOperationTypes,
@@ -42,6 +41,7 @@ import type {
   SelectOption,
   User,
 } from '~/models';
+import { nocoExecute } from '~/utils';
 import {
   Audit,
   BaseUser,
@@ -1621,7 +1621,16 @@ class BaseModelSqlv2 {
 
         tQb.select(jsonBuildObject);
 
-        selectors.push(this.dbDriver.raw(`(??) as ??`, [tQb, `${f.alias}`]));
+        if (this.dbDriver.client.config.client === 'mysql2') {
+          selectors.push(
+            this.dbDriver.raw('JSON_UNQUOTE(??) as ??', [
+              jsonBuildObject,
+              `${f.alias}`,
+            ]),
+          );
+        } else {
+          selectors.push(this.dbDriver.raw('(??) as ??', [tQb, `${f.alias}`]));
+        }
       }
 
       qb.select(...selectors);
@@ -4781,12 +4790,16 @@ class BaseModelSqlv2 {
 
       await this.execAndParse(query, null, { raw: true });
 
-      // const newData = await this.readByPk(id, false, {}, { ignoreView: true , getHiddenColumn: true});
-
-      // const prevData = await this.readByPk(id);
+      const newId = this.extractPksValues(
+        {
+          ...prevData,
+          ...updateObj,
+        },
+        true,
+      );
 
       const newData = await this.readByPk(
-        id,
+        newId,
         false,
         {},
         { ignoreView: true, getHiddenColumn: true },
@@ -4795,7 +4808,7 @@ class BaseModelSqlv2 {
       if (btColumn && Object.keys(data || {}).length === 1) {
         await this.addChild({
           colId: btColumn.id,
-          rowId: id,
+          rowId: newId,
           childId: updateObj[btForeignKeyColumn.title],
           cookie,
           onlyUpdateAuditLogs: true,
@@ -5649,10 +5662,16 @@ class BaseModelSqlv2 {
               prevData.push(oldRecord);
             }
 
-            for (const { pk, data } of tempToRead) {
+            for (let i = 0; i < tempToRead.length; i++) {
+              const { pk, data } = tempToRead[i];
               const wherePk = await this._wherePk(pk, true);
               toBeUpdated.push({ d: data, wherePk });
-              updatePkValues.push(pk);
+              updatePkValues.push(
+                getCompositePkValue(this.model.primaryKeys, {
+                  ...prevData[i],
+                  ...data,
+                }),
+              );
             }
           }
         } else {
@@ -5662,7 +5681,12 @@ class BaseModelSqlv2 {
 
           toBeUpdated.push({ d, wherePk });
 
-          updatePkValues.push(pkValues);
+          updatePkValues.push(
+            getCompositePkValue(this.model.primaryKeys, {
+              ...pkValues,
+              ...d,
+            }),
+          );
         }
       }
 
@@ -6460,7 +6484,7 @@ class BaseModelSqlv2 {
   protected async errorUpdate(_e, _data, _trx, _cookie) {}
 
   // todo: handle composite primary key
-  public extractPksValues(data: any) {
+  public extractPksValues(data: any, asString = false) {
     // data can be still inserted without PK
 
     // if composite primary key return an object with all the primary keys
@@ -6469,7 +6493,7 @@ class BaseModelSqlv2 {
       for (const pk of this.model.primaryKeys) {
         pkValues[pk.title] = data[pk.title] ?? data[pk.column_name];
       }
-      return pkValues;
+      return asString ? Object.values(pkValues).join('___') : pkValues;
     } else if (this.model.primaryKey) {
       return (
         data[this.model.primaryKey.title] ??
@@ -7931,12 +7955,15 @@ class BaseModelSqlv2 {
     return data;
   }
 
-  protected sanitizeQuery(query: string) {
-    if (!this.isPg && !this.isMssql && !this.isSnowflake) {
-      return unsanitize(query);
-    } else {
-      return sanitize(query);
-    }
+  protected sanitizeQuery(query: string | string[]) {
+    const fn = (q: string) => {
+      if (!this.isPg && !this.isMssql && !this.isSnowflake) {
+        return unsanitize(q);
+      } else {
+        return sanitize(q);
+      }
+    };
+    return Array.isArray(query) ? query.map(fn) : fn(query);
   }
 
   async runOps(ops: Promise<string>[], trx = this.dbDriver) {
