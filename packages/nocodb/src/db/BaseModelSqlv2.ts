@@ -6,8 +6,10 @@ import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone';
 import equal from 'fast-deep-equal';
 import {
+  AppEvents,
   AuditOperationSubTypes,
   AuditOperationTypes,
+  extractFilterFromXwhere,
   isCreatedOrLastModifiedByCol,
   isCreatedOrLastModifiedTimeCol,
   isLinksOrLTAR,
@@ -66,17 +68,12 @@ import getAst from '~/helpers/getAst';
 import { sanitize, unsanitize } from '~/helpers/sqlSanitize';
 import Noco from '~/Noco';
 import { HANDLE_WEBHOOK } from '~/services/hook-handler.service';
-import {
-  COMPARISON_OPS,
-  COMPARISON_SUB_OPS,
-  GROUPBY_COMPARISON_OPS,
-  IS_WITHIN_COMPARISON_SUB_OPS,
-} from '~/utils/globals';
 import { extractProps } from '~/helpers/extractProps';
 import { defaultLimitConfig } from '~/helpers/extractLimitAndOffset';
 import generateLookupSelectQuery from '~/db/generateLookupSelectQuery';
 import { getAliasGenerator } from '~/utils';
 import applyAggregation from '~/db/aggregation';
+import { extractMentions } from '~/utils/richTextHelper';
 
 dayjs.extend(utc);
 
@@ -6262,6 +6259,14 @@ class BaseModelSqlv2 {
    *  Hooks
    * */
 
+  public async handleRichTextMentions(
+    prevData,
+    newData: Record<string, any> | Array<Record<string, any>>,
+    req,
+  ) {
+    return;
+  }
+
   public async beforeInsert(data: any, _trx: any, req): Promise<void> {
     await this.handleHooks('before.insert', null, data, req);
   }
@@ -6347,6 +6352,8 @@ class BaseModelSqlv2 {
       ip: req?.clientIp,
       user: req?.user?.email,
     });
+
+    await this.handleRichTextMentions(prevData, newData, req);
   }
 
   public async afterBulkDelete(
@@ -9932,201 +9939,6 @@ export function extractSortsObject(
   });
 }
 
-export function extractFilterFromXwhere(
-  str,
-  aliasColObjMap: { [columnAlias: string]: Column },
-  throwErrorIfInvalid = false,
-) {
-  if (!str) {
-    return [];
-  }
-
-  // if array treat it as `and` group
-  if (Array.isArray(str)) {
-    // calling recursively for nested query
-    return str.map((s) =>
-      extractFilterFromXwhere(s, aliasColObjMap, throwErrorIfInvalid),
-    );
-  } else if (typeof str !== 'string' && throwErrorIfInvalid) {
-    throw new Error(
-      'Invalid filter format. Expected string or array of strings.',
-    );
-  }
-
-  let nestedArrayConditions = [];
-
-  let openIndex = str.indexOf('((');
-
-  if (openIndex === -1) openIndex = str.indexOf('(~');
-
-  let nextOpenIndex = openIndex;
-
-  let closingIndex = str.indexOf('))');
-
-  // if it's a simple query simply return array of conditions
-  if (openIndex === -1) {
-    if (str && str != '~not')
-      nestedArrayConditions = str.split(
-        /(?=~(?:or(?:not)?|and(?:not)?|not)\()/,
-      );
-    return extractCondition(
-      nestedArrayConditions || [],
-      aliasColObjMap,
-      throwErrorIfInvalid,
-    );
-  }
-
-  // iterate until finding right closing
-  while (
-    (nextOpenIndex = str
-      .substring(0, closingIndex)
-      .indexOf('((', nextOpenIndex + 1)) != -1
-  ) {
-    closingIndex = str.indexOf('))', closingIndex + 1);
-  }
-
-  if (closingIndex === -1)
-    throw new Error(
-      `${str
-        .substring(0, openIndex + 1)
-        .slice(-10)} : Closing bracket not found`,
-    );
-
-  // getting operand starting index
-  const operandStartIndex = str.lastIndexOf('~', openIndex);
-  const operator =
-    operandStartIndex != -1
-      ? str.substring(operandStartIndex + 1, openIndex)
-      : '';
-  const lhsOfNestedQuery = str.substring(0, openIndex);
-
-  nestedArrayConditions.push(
-    ...extractFilterFromXwhere(
-      lhsOfNestedQuery,
-      aliasColObjMap,
-      throwErrorIfInvalid,
-    ),
-    // calling recursively for nested query
-    new Filter({
-      is_group: true,
-      logical_op: operator,
-      children: extractFilterFromXwhere(
-        str.substring(openIndex + 1, closingIndex + 1),
-        aliasColObjMap,
-      ),
-    }),
-    // RHS of nested query(recursion)
-    ...extractFilterFromXwhere(
-      str.substring(closingIndex + 2),
-      aliasColObjMap,
-      throwErrorIfInvalid,
-    ),
-  );
-  return nestedArrayConditions;
-}
-
-// mark `op` and `sub_op` any for being assignable to parameter of type
-function validateFilterComparison(uidt: UITypes, op: any, sub_op?: any) {
-  if (!COMPARISON_OPS.includes(op) && !GROUPBY_COMPARISON_OPS.includes(op)) {
-    NcError.badRequest(`${op} is not supported.`);
-  }
-
-  if (sub_op) {
-    if (
-      ![
-        UITypes.Date,
-        UITypes.DateTime,
-        UITypes.CreatedTime,
-        UITypes.LastModifiedTime,
-      ].includes(uidt)
-    ) {
-      NcError.badRequest(`'${sub_op}' is not supported for UI Type'${uidt}'.`);
-    }
-    if (!COMPARISON_SUB_OPS.includes(sub_op)) {
-      NcError.badRequest(`'${sub_op}' is not supported.`);
-    }
-    if (
-      (op === 'isWithin' && !IS_WITHIN_COMPARISON_SUB_OPS.includes(sub_op)) ||
-      (op !== 'isWithin' && IS_WITHIN_COMPARISON_SUB_OPS.includes(sub_op))
-    ) {
-      NcError.badRequest(`'${sub_op}' is not supported for '${op}'`);
-    }
-  }
-}
-
-export function extractCondition(
-  nestedArrayConditions,
-  aliasColObjMap,
-  throwErrorIfInvalid,
-) {
-  return nestedArrayConditions?.map((str) => {
-    let [logicOp, alias, op, value] =
-      str.match(/(?:~(and|or|not))?\((.*?),(\w+),(.*)\)/)?.slice(1) || [];
-
-    if (!alias && !op && !value) {
-      // try match with blank filter format
-      [logicOp, alias, op, value] =
-        str.match(/(?:~(and|or|not))?\((.*?),(\w+)\)/)?.slice(1) || [];
-    }
-
-    // handle isblank and isnotblank filter format
-    switch (op) {
-      case 'is':
-        if (value === 'blank') {
-          op = 'blank';
-          value = undefined;
-        } else if (value === 'notblank') {
-          op = 'notblank';
-          value = undefined;
-        }
-        break;
-      case 'isblank':
-      case 'is_blank':
-        op = 'blank';
-        break;
-      case 'isnotblank':
-      case 'is_not_blank':
-      case 'is_notblank':
-        op = 'notblank';
-        break;
-    }
-
-    let sub_op = null;
-
-    if (aliasColObjMap[alias]) {
-      if (
-        [
-          UITypes.Date,
-          UITypes.DateTime,
-          UITypes.LastModifiedTime,
-          UITypes.CreatedTime,
-        ].includes(aliasColObjMap[alias].uidt)
-      ) {
-        value = value?.split(',');
-        // the first element would be sub_op
-        sub_op = value?.[0];
-        // remove the first element which is sub_op
-        value?.shift();
-        value = value?.[0];
-      } else if (op === 'in') {
-        value = value.split(',');
-      }
-
-      validateFilterComparison(aliasColObjMap[alias].uidt, op, sub_op);
-    } else if (throwErrorIfInvalid) {
-      NcError.invalidFilter(str);
-    }
-
-    return new Filter({
-      comparison_op: op,
-      ...(sub_op && { comparison_sub_op: sub_op }),
-      fk_column_id: aliasColObjMap[alias]?.id,
-      logical_op: logicOp,
-      value,
-    });
-  });
-}
-
 function applyPaginate(
   query,
   {
@@ -10230,9 +10042,13 @@ export function getCompositePkValue(primaryKeys: Column[], row) {
   if (typeof row !== 'object') return row;
 
   if (primaryKeys.length > 1) {
-    return primaryKeys.map((c) =>
-      (row[c.title] ?? row[c.column_name])?.toString?.().replaceAll('_', '\\_'),
-    ).join('___');
+    return primaryKeys
+      .map((c) =>
+        (row[c.title] ?? row[c.column_name])
+          ?.toString?.()
+          .replaceAll('_', '\\_'),
+      )
+      .join('___');
   }
 
   return (

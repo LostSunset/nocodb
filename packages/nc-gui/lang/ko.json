@@ -93,6 +93,7 @@
     "none": "없음"
   },
   "general": {
+    "featurePreview": "기능 미리보기",
     "scripts": "스크립트",
     "configure": "구성",
     "switch": "전환",
@@ -130,12 +131,12 @@
     "abort": "중지",
     "saving": "저장",
     "cancel": "취소",
-    "null": "없음",
+    "null": "Null",
     "escape": "Escape",
     "hex": "16진수",
     "clear": "지우기",
     "slack": "Slack",
-    "comment": "코멘트",
+    "comment": "댓글",
     "microsoftTeams": "Microsoft Teams",
     "discord": "Discord",
     "matterMost": "Mattermost",
@@ -626,6 +627,7 @@
     "noConditionsAdded": "조건이 추가되지 않았습니다"
   },
   "labels": {
+    "toggleExperimentalFeature": "실험 기능을 쉽게 활성화 또는 비활성화하여 향후 출시될 기능들을 탐색하고 평가할 수 있습니다.",
     "modifiedOn": "수정된 날짜",
     "configuration": "구성",
     "setup": "설정",
