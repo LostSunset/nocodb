@@ -93,7 +93,7 @@
     "none": "Geen"
   },
   "general": {
-    "featurePreview": "Feature Preview",
+    "featurePreview": "Voorbeschouwing functionaliteiten",
     "scripts": "Scripts",
     "configure": "Configureren",
     "switch": "Overschakelen",
@@ -627,7 +627,8 @@
     "noConditionsAdded": "Geen voorwaarden toegevoegd"
   },
   "labels": {
-    "toggleExperimentalFeature": "Enable or disable experimental features with ease, allowing you to explore and evaluate upcoming functionalities.",
+    "continue": "Doorgaan",
+    "toggleExperimentalFeature": "Schakel experimentele functies gemakkelijk in of uit, zodat je toekomstige functionaliteiten kunt verkennen en evalueren.",
     "modifiedOn": "Gewijzigd op",
     "configuration": "Configuratie",
     "setup": "Installatie",
@@ -798,6 +799,7 @@
     "clickToCopyTableID": "Klik om Tabel ID te kopiëren",
     "clickToCopyViewID": "Klik om View ID te kopiëren",
     "viewMode": "Weergavemodus",
+    "reAssignView": "Weergave opnieuw toewijzen",
     "searchUsers": "Zoek Gebruikers",
     "superAdmin": "Super Admin",
     "allTables": "Alle Tabellen",
@@ -1007,6 +1009,7 @@
     "redirectToUrl": "Redirect naar URL"
   },
   "activity": {
+    "assignView": "Weergave toewijzen",
     "webhookDetails": "Webhookdetails",
     "hideWeekends": "Verberg weekenden",
     "renameBase": "Hernoem Basis",
@@ -1575,7 +1578,7 @@
       "showAllViews": "Toon alle gedeelde weergaven van deze tabel",
       "collabView": "Collaborators met bewerkingsmachtigingen of hoger kunnen de weergaveconfiguratie wijzigen.",
       "lockedView": "Niemand kan de weergaveconfiguratie bewerken totdat deze is ontgrendeld.",
-      "personalView": "Alleen u kunt de weergaveconfiguratie bewerken. De persoonlijke weergaven van andere medewerkers zijn standaard verborgen.",
+      "personalView": "Alleen u kunt de weergave configuratie bewerken. Voor andere medewerkers staat deze weergave in vergrendelde toestand.",
       "ownerDesc": "Kan Creators toevoegen en verwijderen. Heeft volledige bewerkingsmachtigingen.",
       "creatorDesc": "Heeft volledige bewerkingsmachtigingen over de database structuur en waarden.",
       "editorDesc": "Kan records bewerken, maar kan geen structuur van database / velden wijzigen.",
@@ -1805,7 +1808,8 @@
       "formEmailSMTP": "Activeer de SMTP-plug-in in de App Store voor het inschakelen van e-mailmeldingen",
       "collabView": "Met succes geschakeld naar een samenwerkingsweergave",
       "lockedView": "Met succes geschakeld naar vergrendelde weergave",
-      "futureRelease": "Binnenkort beschikbaar!"
+      "futureRelease": "Binnenkort beschikbaar!",
+      "notAllowedToChangeDefaultView": "Je bent niet gemachtigd om de standaardweergave te wijzigen"
     },
     "success": {
       "licenseKeyUpdated": "Licentiesleutel bijgewerkt",

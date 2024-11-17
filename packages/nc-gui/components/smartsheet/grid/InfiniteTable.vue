@@ -39,6 +39,13 @@ const props = defineProps<{
     metas?: { metaValue?: TableType; viewMetaValue?: ViewType },
     undo?: boolean,
   ) => Promise<void>
+  bulkUpsertRows?: (
+    insertRows: Row[],
+    updateRows: [],
+    props: string[],
+    metas?: { metaValue?: TableType; viewMetaValue?: ViewType },
+    newColumns?: Partial<ColumnType>[],
+  ) => Promise<void>
   expandForm?: (row: Row, state?: Record<string, any>, fromToolbar?: boolean) => void
   removeRowIfNew?: (row: Row) => void
   rowSortRequiredRows: Row[]
@@ -47,6 +54,7 @@ const props = defineProps<{
   syncCount: () => Promise<void>
   selectedRows: Array<Row>
   chunkStates: Array<'loading' | 'loaded' | undefined>
+  isBulkOperationInProgress: boolean
 }>()
 
 const emits = defineEmits(['bulkUpdateDlg'])
@@ -60,6 +68,7 @@ const {
   clearCache,
   syncCount,
   bulkUpdateRows,
+  bulkUpsertRows,
   deleteRangeOfRows,
   removeRowIfNew,
   clearInvalidRows,
@@ -193,6 +202,8 @@ const totalRows = toRef(props, 'totalRows')
 
 const chunkStates = toRef(props, 'chunkStates')
 
+const isBulkOperationInProgress = toRef(props, 'isBulkOperationInProgress')
+
 const rowHeight = computed(() => rowHeightInPx[`${props.rowHeightEnum}`])
 
 const rowSlice = reactive({
@@ -247,7 +258,7 @@ const updateVisibleRows = async () => {
   const firstChunkId = Math.floor(start / CHUNK_SIZE)
   const lastChunkId = Math.floor((end - 1) / CHUNK_SIZE)
 
-  const chunksToFetch = new Set()
+  const chunksToFetch = new Set<number>()
 
   for (let chunkId = firstChunkId; chunkId <= lastChunkId; chunkId++) {
     if (!chunkStates.value[chunkId]) chunksToFetch.add(chunkId)
@@ -645,6 +656,45 @@ const onActiveCellChanged = () => {
   }
 }
 
+const isOpen = ref(false)
+async function expandRows({
+  newRows,
+  newColumns,
+  cellsOverwritten,
+  rowsUpdated,
+}: {
+  newRows: number
+  newColumns: number
+  cellsOverwritten: number
+  rowsUpdated: number
+}) {
+  isOpen.value = true
+  const options = {
+    continue: false,
+    expand: true,
+  }
+  const { close } = useDialog(resolveComponent('DlgExpandTable'), {
+    'modelValue': isOpen,
+    'newRows': newRows,
+    'newColumns': newColumns,
+    'cellsOverwritten': cellsOverwritten,
+    'rowsUpdated': rowsUpdated,
+    'onUpdate:expand': closeDialog,
+    'onUpdate:modelValue': closeDlg,
+  })
+  function closeDlg() {
+    isOpen.value = false
+    close(1000)
+  }
+  async function closeDialog(expand: boolean) {
+    options.continue = true
+    options.expand = expand
+    close(1000)
+  }
+  await until(isOpen).toBe(false)
+  return options
+}
+
 const {
   selectRangeMap,
   fillRangeMap,
@@ -671,6 +721,7 @@ const {
   clearSelectedRangeOfCells,
   makeEditable,
   scrollToCell,
+  expandRows,
   (e: KeyboardEvent) => {
     const activeDropdownEl = document.querySelector(
       '.nc-dropdown-single-select-cell.active,.nc-dropdown-multi-select-cell.active',
@@ -851,6 +902,7 @@ const {
     await updateOrSaveRow?.(rowObj, ctx.updatedColumnTitle || columnObj.title)
   },
   bulkUpdateRows,
+  bulkUpsertRows,
   fillHandle,
   view,
   undefined,
@@ -1347,6 +1399,17 @@ eventBus.on(async (event, payload) => {
   }
 })
 
+watch(activeCell, (activeCell) => {
+  const row = activeCell.row !== null ? cachedRows.value.get(activeCell.row)?.row : undefined
+  const col = row && activeCell.col !== null ? fields.value[activeCell.col] : undefined
+  const val = row && col ? row[col.title as string] : undefined
+
+  const rowId = extractPkFromRow(row!, meta.value?.columns as ColumnType[])
+  const viewId = view.value?.id
+
+  eventBus.emit(SmartsheetStoreEvents.CELL_SELECTED, { rowId, colId: col?.id, val, viewId })
+})
+
 const reloadViewDataHookHandler = async () => {
   // If the scroll Position is not at the top, scroll to the top
   // This always loads the first page of data when the view data is reloaded
@@ -1603,8 +1666,6 @@ const maxGridHeight = computed(() => {
   return totalRows.value * (isMobileMode.value ? 56 : rowHeight.value)
 })
 
-const startRowHeight = computed(() => `${rowSlice.start * rowHeight.value}px`)
-
 const { width, height } = useWindowSize()
 
 watch(
@@ -1637,6 +1698,12 @@ watch(
       }"
         class="border-r-1 border-l-1 border-gray-200 h-full"
       ></div>
+    </div>
+    <div
+      v-if="isBulkOperationInProgress"
+      class="absolute h-full flex items-center justify-center z-70 w-full inset-0 bg-white/50"
+    >
+      <GeneralLoader size="regular" />
     </div>
 
     <div ref="gridWrapper" class="nc-grid-wrapper min-h-0 flex-1 relative !overflow-auto">
@@ -1907,7 +1974,7 @@ watch(
           <div
             class="table-overlay"
             :style="{
-              height: `${maxGridHeight + 256}px`,
+              height: isBulkOperationInProgress ? '100%' : `${maxGridHeight + 256}px`,
               width: `${maxGridWidth}px`,
             }"
           >
@@ -2069,7 +2136,8 @@ watch(
                           'active-cell !after:h-[calc(100%-2px)]':
                             (activeCell.row === row.rowMeta.rowIndex && activeCell.col === 0) ||
                             (selectedRange._start?.row === row.rowMeta.rowIndex && selectedRange._start?.col === 0),
-                          'nc-required-cell': cellMeta[index]?.[0]?.isColumnRequiredAndNull && !isPublicView,
+                          'nc-required-cell':
+                            !row.rowMeta?.isLoading && cellMeta[index]?.[0]?.isColumnRequiredAndNull && !isPublicView,
                           'align-middle': !rowHeightEnum || rowHeightEnum === 1,
                           'align-top': rowHeightEnum && rowHeightEnum !== 1,
                           'filling': fillRangeMap[`${row.rowMeta.rowIndex}-0`],
@@ -2140,7 +2208,8 @@ watch(
                           'active-cell':
                             (activeCell.row === row.rowMeta.rowIndex && activeCell.col === colIndex) ||
                             (selectedRange._start?.row === row.rowMeta.rowIndex && selectedRange._start?.col === colIndex),
-                          'nc-required-cell': cellMeta[index][colIndex].isColumnRequiredAndNull && !isPublicView,
+                          'nc-required-cell':
+                            !row.rowMeta?.isLoading && cellMeta[index][colIndex].isColumnRequiredAndNull && !isPublicView,
                           'align-middle': !rowHeightEnum || rowHeightEnum === 1,
                           'align-top': rowHeightEnum && rowHeightEnum !== 1,
                           'filling': fillRangeMap[`${row.rowMeta.rowIndex}-${colIndex}`],

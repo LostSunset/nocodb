@@ -593,6 +593,7 @@ const {
   clearSelectedRangeOfCells,
   makeEditable,
   scrollToCell,
+  undefined,
   async (e: KeyboardEvent) => {
     // ignore navigating if single/multi select options is open
     const activeDropdownEl = document.querySelector(
@@ -770,6 +771,7 @@ const {
     await updateOrSaveRow?.(rowObj, ctx.updatedColumnTitle || columnObj.title)
   },
   bulkUpdateRows,
+  undefined,
   fillHandle,
   view,
   paginationDataRef,
@@ -787,7 +789,7 @@ async function saveEmptyRow(rowObj: Row) {
   await updateOrSaveRow?.(rowObj)
 }
 
-function addEmptyRow(row?: number, skipUpdate: boolean = false) {
+function addEmptyRow(row?: number, skipUpdate = false) {
   const rowObj = callAddEmptyRow?.(row)
 
   if (!skipUpdate && rowObj) {
@@ -1390,6 +1392,17 @@ eventBus.on(async (event, payload) => {
 
     removeRowIfNew?.(payload)
   }
+})
+
+watch(activeCell, (activeCell) => {
+  const row = activeCell.row !== null ? dataRef.value[activeCell.row].row : undefined
+  const col = row && activeCell.col !== null ? fields.value[activeCell.col] : undefined
+  const val = row && col ? row[col.title as string] : undefined
+
+  const rowId = extractPkFromRow(row!, meta.value?.columns as ColumnType[])
+  const viewId = view.value?.id
+
+  eventBus.emit(SmartsheetStoreEvents.CELL_SELECTED, { rowId, colId: col?.id, val, viewId })
 })
 
 async function reloadViewDataHandler(params: void | { shouldShowLoading?: boolean | undefined; offset?: number | undefined }) {

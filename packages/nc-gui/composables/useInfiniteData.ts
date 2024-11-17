@@ -1,57 +1,61 @@
 import type { ComputedRef, Ref } from 'vue'
-import {
-  type Api,
-  type ColumnType,
-  type LinkToAnotherRecordType,
-  type RelationTypes,
-  type TableType,
-  UITypes,
-  type ViewType,
-  extractFilterFromXwhere,
-  isCreatedOrLastModifiedByCol,
-  isCreatedOrLastModifiedTimeCol,
-} from 'nocodb-sdk'
+import { UITypes, extractFilterFromXwhere } from 'nocodb-sdk'
+import type { Api, ColumnType, LinkToAnotherRecordType, PaginatedType, RelationTypes, TableType, ViewType } from 'nocodb-sdk'
 import type { Row } from '../lib/types'
 import { validateRowFilters } from '../utils/dataUtils'
-import type { CellRange } from './useMultiSelect/cellRange'
+import { NavigateDir } from '../lib/enums'
+
+const formatData = (list: Record<string, any>[], pageInfo: PaginatedType) =>
+  list.map((row, index) => ({
+    row: { ...row },
+    oldRow: { ...row },
+    rowMeta: {
+      // Calculate the rowIndex based on the offset and the index of the row
+      rowIndex: (pageInfo.page - 1) * pageInfo.pageSize + index,
+    },
+  }))
 
 export function useInfiniteData(args: {
   meta: Ref<TableType | undefined> | ComputedRef<TableType | undefined>
   viewMeta: Ref<ViewType | undefined> | ComputedRef<(ViewType & { id: string }) | undefined>
   callbacks: {
-    loadData?: (
-      params: Parameters<Api<any>['dbViewRow']['list']>[4] & {
-        limit?: number
-        offset?: number
-      },
-    ) => Promise<Row[] | undefined>
     syncVisibleData?: () => void
   }
   where?: ComputedRef<string | undefined>
 }) {
-  const { meta, viewMeta, callbacks, where } = args
-
   const NOCO = 'noco'
+
+  const { meta, viewMeta, callbacks, where } = args
 
   const { $api } = useNuxtApp()
 
-  const { addUndo, clone, defineViewScope } = useUndoRedo()
-
   const { t } = useI18n()
 
-  const { fetchCount } = useSharedView()
+  const router = useRouter()
 
-  const { getBaseType } = useBase()
+  const { isUIAllowed } = useRoles()
 
-  const { getMeta, metas } = useMetas()
-
-  const { base } = storeToRefs(useBase())
+  const { addUndo, clone, defineViewScope } = useUndoRedo()
 
   const isPublic = inject(IsPublicInj, ref(false))
 
   const reloadAggregate = inject(ReloadAggregateHookInj)
 
+  const tablesStore = useTablesStore()
+
+  const baseStore = useBase()
+
+  const { base } = storeToRefs(baseStore)
+
+  const { getBaseType } = baseStore
+
+  const { getMeta, metas } = useMetas()
+
+  const { fetchSharedViewData, fetchCount } = useSharedView()
+
   const { nestedFilters, allFilters, xWhere, sorts } = useSmartsheetStoreOrThrow()
+
+  const routeQuery = computed(() => router.currentRoute.value.query as Record<string, string>)
 
   const columnsByAlias = computed(() => {
     if (!meta.value?.columns?.length) return {}
@@ -78,6 +82,14 @@ export function useInfiniteData(args: {
 
   const cachedRows = ref<Map<number, Row>>(new Map())
 
+  const selectedRows = computed<Row[]>(() => {
+    return Array.from(cachedRows.value.values()).filter((row) => row.rowMeta?.selected)
+  })
+
+  const isRowSortRequiredRows = computed(() => {
+    return Array.from(cachedRows.value.values()).filter((row) => row.rowMeta?.isRowOrderUpdated)
+  })
+
   const totalRows = ref(0)
 
   const MAX_CACHE_SIZE = 200
@@ -91,13 +103,11 @@ export function useInfiniteData(args: {
   const fetchChunk = async (chunkId: number) => {
     if (chunkStates.value[chunkId]) return
 
-    if (!callbacks?.loadData) return
-
     chunkStates.value[chunkId] = 'loading'
     const offset = chunkId * CHUNK_SIZE
 
     try {
-      const newItems = await callbacks.loadData({ offset, limit: CHUNK_SIZE })
+      const newItems = await loadData({ offset, limit: CHUNK_SIZE })
       if (!newItems) {
         chunkStates.value[chunkId] = undefined
         return
@@ -127,7 +137,6 @@ export function useInfiniteData(args: {
     const safeEndChunk = getChunkIndex(safeEndIndex)
 
     const newCachedRows = new Map<number, Row>()
-
     for (let chunk = 0; chunk <= Math.max(...Array.from(cachedRows.value.keys()).map(getChunkIndex)); chunk++) {
       const isVisibleChunk = chunk >= safeStartChunk && chunk <= safeEndChunk
       const chunkStart = chunk * CHUNK_SIZE
@@ -151,13 +160,149 @@ export function useInfiniteData(args: {
     )
   }
 
-  const selectedRows = computed<Row[]>(() => {
-    return Array.from(cachedRows.value.values()).filter((row) => row.rowMeta?.selected)
-  })
+  async function loadAggCommentsCount(formattedData: Array<Row>) {
+    if (!isUIAllowed('commentCount') || isPublic.value) return
 
-  const isRowSortRequiredRows = computed(() => {
-    return Array.from(cachedRows.value.values()).filter((row) => row.rowMeta?.isRowOrderUpdated)
-  })
+    const ids = formattedData
+      .filter(({ rowMeta: { new: isNew } }) => !isNew)
+      .map(({ row }) => extractPkFromRow(row, meta?.value?.columns as ColumnType[]))
+      .filter(Boolean)
+
+    if (!ids.length) return
+
+    try {
+      const aggCommentCount = await $api.utils.commentCount({
+        ids,
+        fk_model_id: meta.value!.id as string,
+      })
+
+      formattedData.forEach((row) => {
+        const cachedRow = Array.from(cachedRows.value.values()).find(
+          (cachedRow) => cachedRow.rowMeta.rowIndex === row.rowMeta.rowIndex,
+        )
+        if (!cachedRow) return
+
+        const id = extractPkFromRow(row.row, meta.value?.columns as ColumnType[])
+        const count = aggCommentCount?.find((c: Record<string, any>) => c.row_id === id)?.count || 0
+        cachedRow.rowMeta.commentCount = +count
+      })
+    } catch (e) {
+      console.error('Failed to load aggregate comment count:', e)
+    }
+  }
+
+  async function loadData(
+    params: Parameters<Api<any>['dbViewRow']['list']>[4] & {
+      limit?: number
+      offset?: number
+    } = {},
+  ): Promise<Row[]> {
+    if ((!base?.value?.id || !meta.value?.id || !viewMeta.value?.id) && !isPublic.value) return []
+
+    try {
+      const response = !isPublic.value
+        ? await $api.dbViewRow.list('noco', base.value.id!, meta.value!.id!, viewMeta.value!.id!, {
+            ...params,
+            ...(isUIAllowed('sortSync') ? {} : { sortArrJson: JSON.stringify(sorts.value) }),
+            ...(isUIAllowed('filterSync') ? {} : { filterArrJson: JSON.stringify(nestedFilters.value) }),
+            where: where?.value,
+          } as any)
+        : await fetchSharedViewData(
+            {
+              sortsArr: sorts.value,
+              filtersArr: nestedFilters.value,
+              where: where?.value,
+              offset: params.offset,
+              limit: params.limit,
+            },
+            {
+              isInfiniteScroll: true,
+            },
+          )
+
+      const data = formatData(response.list, response.pageInfo)
+
+      if (response.pageInfo.totalRows) {
+        totalRows.value = response.pageInfo.totalRows
+      }
+
+      loadAggCommentsCount(data)
+
+      return data
+    } catch (error: any) {
+      if (error?.response?.data.error === 'INVALID_OFFSET_VALUE') {
+        return []
+      }
+      if (error?.response?.data?.error === 'FORMULA_ERROR') {
+        await tablesStore.reloadTableMeta(meta.value!.id! as string)
+        return loadData(params)
+      }
+
+      console.error(error)
+      message.error(await extractSdkResponseErrorMsg(error))
+      return []
+    }
+  }
+
+  const navigateToSiblingRow = async (dir: NavigateDir) => {
+    const expandedRowIndex = getExpandedRowIndex()
+    if (expandedRowIndex === -1) return
+
+    const sortedIndices = Array.from(cachedRows.value.keys()).sort((a, b) => a - b)
+    let siblingIndex = sortedIndices.findIndex((index) => index === expandedRowIndex) + (dir === NavigateDir.NEXT ? 1 : -1)
+
+    // Skip unsaved rows
+    while (
+      siblingIndex >= 0 &&
+      siblingIndex < sortedIndices.length &&
+      cachedRows.value.get(sortedIndices[siblingIndex])?.rowMeta?.new
+    ) {
+      siblingIndex += dir === NavigateDir.NEXT ? 1 : -1
+    }
+
+    // Check if we've gone out of bounds
+    if (siblingIndex < 0 || siblingIndex >= totalRows.value) {
+      return message.info(t('msg.info.noMoreRecords'))
+    }
+
+    // If the sibling row is not in cachedRows, load more data
+    if (siblingIndex >= sortedIndices.length) {
+      await loadData({
+        offset: sortedIndices[sortedIndices.length - 1] + 1,
+        limit: 10,
+      })
+      sortedIndices.push(
+        ...Array.from(cachedRows.value.keys())
+          .filter((key) => !sortedIndices.includes(key))
+          .sort((a, b) => a - b),
+      )
+    }
+
+    // Extract the row id of the sibling row
+    const siblingRow = cachedRows.value.get(sortedIndices[siblingIndex])
+    if (siblingRow) {
+      const rowId = extractPkFromRow(siblingRow.row, meta.value?.columns as ColumnType[])
+      if (rowId) {
+        await router.push({
+          query: {
+            ...routeQuery.value,
+            rowId,
+          },
+        })
+      }
+    }
+  }
+
+  const fetchMissingChunks = async (startIndex: number, endIndex: number) => {
+    const firstChunkId = Math.floor(startIndex / CHUNK_SIZE)
+    const lastChunkId = Math.floor(endIndex / CHUNK_SIZE)
+
+    const chunksToFetch = Array.from({ length: lastChunkId - firstChunkId + 1 }, (_, i) => firstChunkId + i).filter(
+      (chunkId) => !chunkStates.value[chunkId],
+    )
+
+    await Promise.all(chunksToFetch.map(fetchChunk))
+  }
 
   function clearInvalidRows() {
     const sortedEntries = Array.from(cachedRows.value.entries()).sort(([indexA], [indexB]) => indexA - indexB)
@@ -297,7 +442,7 @@ export function useInfiniteData(args: {
         .map(([index, row]) => ({
           currentIndex: index,
           row,
-          pk: extractPkFromRow(row.row, meta.value?.columns),
+          pk: extractPkFromRow(row.row, meta.value?.columns ?? []),
         }))
 
       const sortedRangeEntries = rangeEntries.sort((a, b) => {
@@ -318,7 +463,7 @@ export function useInfiniteData(args: {
         return a.currentIndex - b.currentIndex
       })
 
-      const entry = sortedRangeEntries.find((e) => e.pk === extractPkFromRow(inputRow.row, meta.value?.columns))
+      const entry = sortedRangeEntries.find((e) => e.pk === extractPkFromRow(inputRow.row, meta.value?.columns ?? []))
 
       if (!entry) return
 
@@ -328,6 +473,7 @@ export function useInfiniteData(args: {
 
       if (targetIndex !== originalIndex) {
         if (targetIndex < originalIndex) {
+          // Move up
           for (let i = originalIndex - 1; i >= targetIndex; i--) {
             const row = newCachedRows.get(i)
             if (row) {
@@ -337,6 +483,7 @@ export function useInfiniteData(args: {
             }
           }
         } else {
+          // Move down
           for (let i = originalIndex + 1; i <= targetIndex; i++) {
             const row = newCachedRows.get(i)
             if (row) {
@@ -540,94 +687,6 @@ export function useInfiniteData(args: {
     }
   }
 
-  async function deleteSelectedRows(): Promise<void> {
-    const removedRowsData: Record<string, any>[] = []
-    let compositePrimaryKey = ''
-
-    for (const row of selectedRows.value) {
-      const { row: rowData, rowMeta } = row
-
-      if (!rowMeta.selected || rowMeta.new) {
-        continue
-      }
-
-      const extractedPk = extractPk(meta?.value?.columns as ColumnType[])
-      const compositePkValue = extractPkFromRow(rowData, meta?.value?.columns as ColumnType[]) as string
-      const pkData = rowPkData(rowData, meta?.value?.columns as ColumnType[])
-
-      if (extractedPk && compositePkValue) {
-        if (!compositePrimaryKey) compositePrimaryKey = extractedPk
-        removedRowsData.push({
-          [compositePrimaryKey]: compositePkValue as string,
-          pkData,
-          row: clone(row.row),
-          rowMeta,
-        })
-      }
-    }
-
-    if (!removedRowsData.length) return
-
-    try {
-      const { list } = await $api.dbTableRow.list(NOCO, base?.value.id as string, meta.value?.id as string, {
-        pks: removedRowsData.map((row) => row[compositePrimaryKey]).join(','),
-      })
-
-      for (const deleteRow of removedRowsData) {
-        const rowObj = deleteRow.row
-        const rowPk = rowPkData(rowObj.row, meta.value?.columns as ColumnType[])
-
-        const fullRecord = list.find((r: Record<string, any>) => {
-          return Object.keys(rowPk).every((key) => r[key] === rowPk[key])
-        })
-
-        if (!fullRecord) continue
-        rowObj.row = clone(fullRecord)
-      }
-
-      await bulkDeleteRows(removedRowsData.map((row) => row.pkData))
-    } catch (e: any) {
-      const errorMessage = await extractSdkResponseErrorMsg(e)
-      return message.error(`${t('msg.error.deleteRowFailed')}: ${errorMessage}`)
-    }
-
-    await updateCacheAfterDelete(removedRowsData, false)
-
-    addUndo({
-      undo: {
-        fn: async (removedRowsData: Record<string, any>[]) => {
-          const rowsToInsert = removedRowsData
-            .map((row) => {
-              const pkData = rowPkData(row.row, meta.value?.columns as ColumnType[])
-              row.row = { ...pkData, ...row.row }
-              return row
-            })
-            .reverse()
-
-          const insertedRowIds = await bulkInsertRows(rowsToInsert as Row[], undefined, true)
-
-          if (Array.isArray(insertedRowIds)) {
-            await Promise.all(rowsToInsert.map((row, _index) => recoverLTARRefs(row.row)))
-          }
-        },
-        args: [removedRowsData],
-      },
-      redo: {
-        fn: async (toBeRemovedData: Record<string, any>[]) => {
-          await bulkDeleteRows(toBeRemovedData.map((row) => row.pkData))
-
-          await updateCacheAfterDelete(toBeRemovedData, false)
-
-          await syncCount()
-        },
-        args: [removedRowsData],
-      },
-      scope: defineViewScope({ view: viewMeta.value }),
-    })
-
-    await syncCount()
-  }
-
   async function insertRow(
     currentRow: Row,
     ltarState: Record<string, any> = {},
@@ -668,6 +727,17 @@ export function useInfiniteData(args: {
 
       const insertIndex = currentRow.rowMeta.rowIndex!
 
+      /*   if (cachedRows.value.has(insertIndex) && !ignoreShifting) {
+        const rows = Array.from(cachedRows.value.entries())
+        const rowsToShift = rows.filter(([index]) => index >= insertIndex)
+        rowsToShift.sort((a, b) => b[0] - a[0]) // Sort in descending order
+
+        for (const [index, row] of rowsToShift) {
+          row.rowMeta.rowIndex = index + 1
+          cachedRows.value.set(index + 1, row)
+        }
+      }
+*/
       if (!undo) {
         Object.assign(currentRow.oldRow, insertedData)
 
@@ -769,96 +839,6 @@ export function useInfiniteData(args: {
       throw error
     } finally {
       currentRow.rowMeta.saving = false
-    }
-  }
-
-  async function bulkInsertRows(
-    rows: Row[],
-    { metaValue = meta.value, viewMetaValue = viewMeta.value }: { metaValue?: TableType; viewMetaValue?: ViewType } = {},
-    undo = false,
-  ): Promise<string[]> {
-    if (!metaValue || !viewMetaValue) {
-      throw new Error('Meta value or view meta value is undefined')
-    }
-
-    const autoGeneratedKeys = new Set(
-      metaValue.columns
-        ?.filter((c) => !c.pk && (isCreatedOrLastModifiedTimeCol(c) || isCreatedOrLastModifiedByCol(c)))
-        .map((c) => c.title),
-    )
-
-    try {
-      const rowsToInsert = await Promise.all(
-        rows.map(async (currentRow) => {
-          const { missingRequiredColumns, insertObj } = await populateInsertObject({
-            meta: metaValue,
-            ltarState: {},
-            getMeta,
-            row: currentRow.row,
-            undo,
-          })
-
-          if (missingRequiredColumns.size === 0) {
-            for (const key of autoGeneratedKeys) {
-              delete insertObj[key!]
-            }
-            return { insertObj, rowIndex: currentRow.rowMeta.rowIndex }
-          }
-          return null
-        }),
-      )
-
-      const validRowsToInsert = rowsToInsert.filter(Boolean) as { insertObj: Record<string, any>; rowIndex: number }[]
-
-      const bulkInsertedIds = await $api.dbDataTableRow.create(
-        metaValue.id!,
-        validRowsToInsert.map((row) => row!.insertObj),
-        {
-          viewId: viewMetaValue.id,
-        },
-      )
-
-      validRowsToInsert.sort((a, b) => (a!.rowIndex ?? 0) - (b!.rowIndex ?? 0))
-
-      const newCachedRows = new Map<number, Row>()
-
-      for (const [index, row] of cachedRows.value) {
-        newCachedRows.set(index, { ...row, rowMeta: { ...row.rowMeta, rowIndex: index } })
-      }
-
-      for (const { insertObj, rowIndex } of validRowsToInsert) {
-        // If there's already a row at this index, shift it and all subsequent rows
-        if (newCachedRows.has(rowIndex!)) {
-          const rowsToShift = Array.from(newCachedRows.entries())
-            .filter(([index]) => index >= rowIndex!)
-            .sort((a, b) => b[0] - a[0]) // Sort in descending order
-
-          for (const [index, row] of rowsToShift) {
-            const newIndex = index + 1
-            newCachedRows.set(newIndex, { ...row, rowMeta: { ...row.rowMeta, rowIndex: newIndex } })
-          }
-        }
-
-        const newRow = {
-          row: { ...insertObj, id: bulkInsertedIds[validRowsToInsert.indexOf({ insertObj, rowIndex })] },
-          oldRow: {},
-          rowMeta: { rowIndex: rowIndex!, new: false },
-        }
-        newCachedRows.set(rowIndex!, newRow)
-      }
-
-      cachedRows.value = newCachedRows
-
-      totalRows.value += validRowsToInsert.length
-
-      await syncCount()
-      callbacks?.syncVisibleData?.()
-
-      return bulkInsertedIds
-    } catch (error: any) {
-      const errorMessage = await extractSdkResponseErrorMsg(error)
-      message.error(`Failed to bulk insert rows: ${errorMessage}`)
-      throw error
     }
   }
 
@@ -987,11 +967,12 @@ export function useInfiniteData(args: {
     } else if (property) {
       data = await updateRowProperty(row, property, args)
     }
+
     row.rowMeta.isValidationFailed = !validateRowFilters(
       [...allFilters.value, ...computedWhereFilter.value],
       data,
       meta.value?.columns as ColumnType[],
-      getBaseType(viewMeta.value?.view.source_id),
+      getBaseType(viewMeta.value?.view?.source_id),
     )
 
     const changedFields = property ? [property] : Object.keys(row.row)
@@ -1023,67 +1004,7 @@ export function useInfiniteData(args: {
       const newRow = cachedRows.value.get(row.rowMeta.rowIndex!)
       if (newRow) newRow.rowMeta.isRowOrderUpdated = needsResorting
     }
-  }
-
-  async function bulkUpdateRows(
-    rows: Row[],
-    props: string[],
-    { metaValue = meta.value }: { metaValue?: TableType; viewMetaValue?: ViewType } = {},
-    undo = false,
-  ): Promise<void> {
-    await Promise.all(
-      rows.map(async (row) => {
-        if (row.rowMeta) {
-          row.rowMeta.changed = false
-          await until(() => !(row.rowMeta?.new && row.rowMeta?.saving)).toMatch((v) => v)
-          row.rowMeta.saving = true
-        }
-      }),
-    )
-
-    const updateArray = rows.map((row) => {
-      const pk = rowPkData(row.row, metaValue?.columns as ColumnType[])
-      const updateData = props.reduce((acc, prop) => ({ ...acc, [prop]: row.row[prop] }), {})
-      return { ...updateData, ...pk }
-    })
-
-    try {
-      await $api.dbTableRow.bulkUpdate(NOCO, metaValue?.base_id as string, metaValue?.id as string, updateArray)
-      reloadAggregate?.trigger({ fields: props.map((p) => ({ title: p })) })
-
-      // Update cachedRows with the updated data
-      rows.forEach((row) => {
-        if (row.rowMeta.rowIndex !== undefined) {
-          cachedRows.value.set(row.rowMeta.rowIndex, row)
-        }
-      })
-    } finally {
-      rows.forEach((row) => {
-        if (row.rowMeta) row.rowMeta.saving = false
-      })
-    }
-
     callbacks?.syncVisibleData?.()
-
-    if (!undo) {
-      addUndo({
-        undo: {
-          fn: async (undoRows: Row[], props: string[]) => {
-            await bulkUpdateRows(undoRows, props, undefined, true)
-          },
-          args: [clone(rows.map((row) => ({ row: row.oldRow, oldRow: row.row, rowMeta: row.rowMeta }))), props],
-        },
-        redo: {
-          fn: async (redoRows: Row[], props: string[]) => {
-            await bulkUpdateRows(redoRows, props, undefined, true)
-          },
-          args: [clone(rows), props],
-        },
-        scope: defineViewScope({ view: viewMeta.value }),
-      })
-    }
-
-    applySorting(rows)
   }
 
   async function bulkUpdateView(
@@ -1136,184 +1057,6 @@ export function useInfiniteData(args: {
       return false
     }
   }
-
-  const fetchMissingChunks = async (startIndex: number, endIndex: number) => {
-    const firstChunkId = getChunkIndex(startIndex)
-    const lastChunkId = getChunkIndex(endIndex)
-
-    const chunksToFetch = Array.from({ length: lastChunkId - firstChunkId + 1 }, (_, i) => firstChunkId + i).filter(
-      (chunkId) => !chunkStates.value[chunkId],
-    )
-
-    await Promise.all(chunksToFetch.map(fetchChunk))
-  }
-
-  async function updateCacheAfterDelete(rowsToDelete: Record<string, any>[], nested = true): Promise<void> {
-    const maxCachedIndex = Math.max(...cachedRows.value.keys())
-    const newCachedRows = new Map<number, Row>()
-
-    const deleteSet = new Set(rowsToDelete.map((row) => (nested ? row.row : row).rowMeta.rowIndex))
-
-    let deletionCount = 0
-    let lastIndex = -1
-
-    for (let i = 0; i <= maxCachedIndex + 1; i++) {
-      if (deleteSet.has(i)) {
-        deletionCount++
-        continue
-      }
-
-      if (cachedRows.value.has(i)) {
-        const row = cachedRows.value.get(i)
-        if (row) {
-          const newIndex = i - deletionCount
-          if (lastIndex !== -1 && newIndex - lastIndex > 1) {
-            chunkStates.value[getChunkIndex(lastIndex)] = undefined
-          }
-
-          row.rowMeta.rowIndex = newIndex
-          newCachedRows.set(newIndex, row)
-          lastIndex = newIndex
-        }
-      }
-    }
-
-    if (lastIndex !== -1) {
-      chunkStates.value[getChunkIndex(lastIndex)] = undefined
-    }
-
-    cachedRows.value = newCachedRows
-    totalRows.value = Math.max(0, totalRows.value - rowsToDelete.length)
-
-    await syncCount()
-    callbacks?.syncVisibleData?.()
-  }
-
-  async function deleteRangeOfRows(cellRange: CellRange): Promise<void> {
-    if (!cellRange._start || !cellRange._end) return
-
-    const start = Math.min(cellRange._start.row, cellRange._end.row)
-    const end = Math.max(cellRange._start.row, cellRange._end.row)
-
-    const rowsToDelete: Record<string, any>[] = []
-    let compositePrimaryKey = ''
-
-    const uncachedRows = Array.from({ length: end - start + 1 }, (_, i) => start + i).filter(
-      (index) => !cachedRows.value.has(index),
-    )
-
-    if (uncachedRows.length > 0) {
-      await fetchMissingChunks(uncachedRows[0], uncachedRows[uncachedRows.length - 1])
-    }
-
-    for (let i = start; i <= end; i++) {
-      const cachedRow = cachedRows.value.get(i)
-      if (!cachedRow) {
-        console.warn(`Record at index ${i} not found in local cache`)
-        continue
-      }
-
-      const { row: rowData, rowMeta } = cachedRow
-
-      if (!rowMeta.new) {
-        const extractedPk = extractPk(meta?.value?.columns as ColumnType[])
-        const compositePkValue = extractPkFromRow(rowData, meta?.value?.columns as ColumnType[])
-        const pkData = rowPkData(rowData, meta?.value?.columns as ColumnType[])
-
-        if (extractedPk && compositePkValue) {
-          if (!compositePrimaryKey) compositePrimaryKey = extractedPk
-
-          rowsToDelete.push({
-            [compositePrimaryKey]: compositePkValue,
-            pkData,
-            row: { ...cachedRow },
-            rowIndex: i,
-          })
-        }
-      }
-    }
-
-    if (!rowsToDelete.length) return
-
-    const { list } = await $api.dbTableRow.list(NOCO, base?.value.id as string, meta.value?.id as string, {
-      pks: rowsToDelete.map((row) => row[compositePrimaryKey]).join(','),
-    })
-
-    try {
-      for (const deleteRow of rowsToDelete) {
-        const rowObj = deleteRow.row
-        const rowPk = rowPkData(rowObj.row, meta.value?.columns as ColumnType[])
-
-        const fullRecord = list.find((r: Record<string, any>) => {
-          return Object.keys(rowPk).every((key) => r[key] === rowPk[key])
-        })
-
-        if (!fullRecord) {
-          console.warn(`Full record not found for row with index ${deleteRow.rowIndex}`)
-          continue
-        }
-        rowObj.row = fullRecord
-      }
-
-      await bulkDeleteRows(rowsToDelete.map((row) => row.pkData))
-    } catch (e: any) {
-      const errorMessage = await extractSdkResponseErrorMsg(e)
-      message.error(`${t('msg.error.deleteRowFailed')}: ${errorMessage}`)
-      throw e
-    }
-
-    addUndo({
-      undo: {
-        fn: async (deletedRows: Record<string, any>[]) => {
-          const rowsToInsert = deletedRows
-            .map((row) => {
-              const pkData = rowPkData(row.row, meta.value?.columns as ColumnType[])
-              row.row = { ...pkData, ...row.row }
-              return row
-            })
-            .reverse()
-
-          const insertedRowIds = await bulkInsertRows(
-            rowsToInsert.map((row) => row.row),
-            undefined,
-            true,
-          )
-
-          if (Array.isArray(insertedRowIds)) {
-            await Promise.all(rowsToInsert.map((row, _index) => recoverLTARRefs(row.row)))
-          }
-        },
-        args: [rowsToDelete],
-      },
-      redo: {
-        fn: async (rowsToDelete: Record<string, any>[]) => {
-          await bulkDeleteRows(rowsToDelete.map((row) => row.pkData))
-          await updateCacheAfterDelete(rowsToDelete)
-        },
-        args: [rowsToDelete],
-      },
-      scope: defineViewScope({ view: viewMeta.value }),
-    })
-    await updateCacheAfterDelete(rowsToDelete)
-  }
-
-  async function bulkDeleteRows(
-    rows: Record<string, string>[],
-    { metaValue = meta.value, viewMetaValue = viewMeta.value }: { metaValue?: TableType; viewMetaValue?: ViewType } = {},
-  ): Promise<any> {
-    try {
-      const bulkDeletedRowsData = await $api.dbDataTableRow.delete(metaValue?.id as string, rows.length === 1 ? rows[0] : rows, {
-        viewId: viewMetaValue?.id as string,
-      })
-      reloadAggregate?.trigger()
-
-      return rows.length === 1 && bulkDeletedRowsData ? [bulkDeletedRowsData] : bulkDeletedRowsData
-    } catch (error: any) {
-      const errorMessage = await extractSdkResponseErrorMsg(error)
-      message.error(`Bulk delete failed: ${errorMessage}`)
-    }
-  }
-
   const removeRowIfNew = (row: Row): boolean => {
     const index = Array.from(cachedRows.value.entries()).find(([_, r]) => r.rowMeta.rowIndex === row.rowMeta.rowIndex)?.[0]
 
@@ -1344,21 +1087,46 @@ export function useInfiniteData(args: {
     }
   }
 
+  function getExpandedRowIndex(): number {
+    const rowId = routeQuery.value.rowId
+    if (!rowId) return -1
+
+    for (const [_index, row] of cachedRows.value.entries()) {
+      if (extractPkFromRow(row.row, meta.value?.columns as ColumnType[]) === rowId) {
+        return row.rowMeta.rowIndex!
+      }
+    }
+    return -1
+  }
+
+  const isLastRow = computed(() => {
+    const expandedRowIndex = getExpandedRowIndex()
+    if (expandedRowIndex === -1) return false
+
+    return expandedRowIndex === totalRows.value - 1
+  })
+
+  const isFirstRow = computed(() => {
+    const expandedRowIndex = getExpandedRowIndex()
+    if (expandedRowIndex === -1) return false
+
+    return expandedRowIndex === 0
+  })
+
   return {
     insertRow,
     updateRowProperty,
     addEmptyRow,
     deleteRow,
     deleteRowById,
-    deleteSelectedRows,
-    deleteRangeOfRows,
+    getChunkIndex,
+    fetchMissingChunks,
+    fetchChunk,
     updateOrSaveRow,
-    bulkUpdateRows,
     bulkUpdateView,
     removeRowIfNew,
-    bulkDeleteRows,
-    bulkInsertRows,
     cachedRows,
+    recoverLTARRefs,
     totalRows,
     clearCache,
     syncCount,
@@ -1367,5 +1135,12 @@ export function useInfiniteData(args: {
     isRowSortRequiredRows,
     clearInvalidRows,
     applySorting,
+    CHUNK_SIZE,
+    loadData,
+    isLastRow,
+    isFirstRow,
+    getExpandedRowIndex,
+    loadAggCommentsCount,
+    navigateToSiblingRow,
   }
 }
