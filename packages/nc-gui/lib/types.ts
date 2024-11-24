@@ -102,6 +102,7 @@ interface Row {
     overLapIteration?: number
     numberOfOverlaps?: number
     minutes?: number
+    recordIndex?: number // For week spanning records in month view
   }
 }
 
@@ -245,6 +246,11 @@ interface FormFieldsLimitOptionsType {
 interface ImageCropperConfig {
   stencilProps?: {
     aspectRatio?: number
+    /**
+     * It can be used to force the cropper fills all visible area by default:
+     * @default true
+     */
+    fillDefault?: boolean
   }
   minHeight?: number
   minWidth?: number
