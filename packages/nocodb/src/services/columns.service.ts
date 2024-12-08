@@ -1483,10 +1483,26 @@ export class ColumnsService {
             UITypes.MultiSelect,
           ].includes(column.uidt)
         ) {
+          const dbDriver = await reuseOrSave('dbDriver', reuse, async () =>
+            NcConnectionMgrv2.get(source),
+          );
+          const driverType = dbDriver.clientType();
+
+          let trimColumn = `??`;
+          if (driverType === 'mysql' || driverType === 'mysql2') {
+            trimColumn = `TRIM(BOTH ' ' FROM ??)`;
+          } else if (driverType === 'pg') {
+            trimColumn = `BTRIM(??)`;
+          } else if (driverType === 'mssql') {
+            trimColumn = `LTRIM(RTRIM(??))`;
+          } else if (driverType === 'sqlite3') {
+            trimColumn = `TRIM(??)`;
+          }
+
           setStatement = baseUsers
             .map((user) =>
               sqlClient.knex
-                .raw('WHEN ?? = ? THEN ?', [
+                .raw(`WHEN ${trimColumn} = ? THEN ?`, [
                   column.column_name,
                   user.email,
                   user.id,
@@ -1571,6 +1587,17 @@ export class ColumnsService {
           });
         },
       });
+    }
+
+    if (
+      column.uidt === UITypes.Attachment &&
+      colBody.uidt !== UITypes.Attachment
+    ) {
+      await View.updateIfColumnUsedAsExpandedMode(
+        context,
+        column.id,
+        column.fk_model_id,
+      );
     }
 
     // Get all the columns in the table and return
@@ -2693,6 +2720,13 @@ export class ColumnsService {
         ncMeta,
       );
     }
+
+    await View.updateIfColumnUsedAsExpandedMode(
+      context,
+      column.id,
+      column.fk_model_id,
+      ncMeta,
+    );
 
     this.appHooksService.emit(AppEvents.COLUMN_DELETE, {
       table,

@@ -384,13 +384,14 @@ export class ExportService {
 
       if (!excludeComments) {
         const READ_BATCH_SIZE = 100;
-        let comments: Comment[] = [];
+        const comments: Comment[] = [];
         let offset = 0;
 
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           const batchComments = await Comment.listByModel(context, model.id, {
             limit: READ_BATCH_SIZE + 1,
-            offset
+            offset,
           });
 
           comments.push(...batchComments.slice(0, READ_BATCH_SIZE));

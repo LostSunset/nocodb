@@ -55,6 +55,8 @@ export function useInfiniteData(args: {
 
   const { nestedFilters, allFilters, xWhere, sorts } = useSmartsheetStoreOrThrow()
 
+  const selectedAllRecords = ref(false)
+
   const routeQuery = computed(() => router.currentRoute.value.query as Record<string, string>)
 
   const columnsByAlias = computed(() => {
@@ -862,7 +864,7 @@ export function useInfiniteData(args: {
         base?.value.id as string,
         metaValue?.id as string,
         viewMetaValue?.id as string,
-        id,
+        encodeURIComponent(id),
         {
           [property]: toUpdate.row[property] ?? null,
         },
@@ -1142,5 +1144,6 @@ export function useInfiniteData(args: {
     getExpandedRowIndex,
     loadAggCommentsCount,
     navigateToSiblingRow,
+    selectedAllRecords,
   }
 }

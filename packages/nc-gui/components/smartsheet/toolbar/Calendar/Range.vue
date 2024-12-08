@@ -138,10 +138,12 @@ const saveCalendarRanges = async () => {
   }
 }
 
+/*
 const removeRange = async (id: number) => {
   _calendar_ranges.value = _calendar_ranges.value.filter((_, i) => i !== id)
   await saveCalendarRanges()
 }
+*/
 
 const isDisabled = computed(() => {
   return (
@@ -251,7 +253,7 @@ const onValueChange = async () => {
               </div>
             </a-select-option>
           </a-select>
-          <div v-if="!isEeUI" class="w-full space-y-2">
+          <div v-if="isEeUI" class="w-full space-y-2">
             <NcTooltip v-if="range.fk_to_column_id === null && isRangeEnabled" placement="left" :disabled="!isDisabled">
               <NcButton
                 size="small"
