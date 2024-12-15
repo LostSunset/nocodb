@@ -10,11 +10,14 @@ import {
   AuditOperationTypes,
   ButtonActionsType,
   extractFilterFromXwhere,
+  isAIPromptCol,
   isCreatedOrLastModifiedByCol,
   isCreatedOrLastModifiedTimeCol,
   isLinksOrLTAR,
+  isOrderCol,
   isSystemColumn,
   isVirtualCol,
+  LongTextAiMetaProp,
   RelationTypes,
   UITypes,
 } from 'nocodb-sdk';
@@ -26,12 +29,10 @@ import { Logger } from '@nestjs/common';
 import type { SortType } from 'nocodb-sdk';
 import type { Knex } from 'knex';
 import type LookupColumn from '~/models/LookupColumn';
-import type { XKnex } from '~/db/CustomKnex';
 import type {
   XcFilter,
   XcFilterWithAlias,
 } from '~/db/sql-data-mapper/lib/BaseModel';
-import type CustomKnex from '~/db/CustomKnex';
 import type { NcContext } from '~/interface/config';
 import type {
   BarcodeColumn,
@@ -43,7 +44,8 @@ import type {
   SelectOption,
   User,
 } from '~/models';
-import { nocoExecute } from '~/utils';
+import type CustomKnex from '~/db/CustomKnex';
+import type { XKnex } from '~/db/CustomKnex';
 import {
   Audit,
   BaseUser,
@@ -57,6 +59,7 @@ import {
   Source,
   View,
 } from '~/models';
+import { getAliasGenerator, nocoExecute } from '~/utils';
 import formulaQueryBuilderv2 from '~/db/formulav2/formulaQueryBuilderv2';
 import genRollupSelectv2 from '~/db/genRollupSelectv2';
 import conditionV2 from '~/db/conditionV2';
@@ -71,7 +74,6 @@ import { HANDLE_WEBHOOK } from '~/services/hook-handler.service';
 import { extractProps } from '~/helpers/extractProps';
 import { defaultLimitConfig } from '~/helpers/extractLimitAndOffset';
 import generateLookupSelectQuery from '~/db/generateLookupSelectQuery';
-import { getAliasGenerator } from '~/utils';
 import applyAggregation from '~/db/aggregation';
 import { chunkArray } from '~/utils/tsUtils';
 
@@ -89,6 +91,8 @@ const isPrimitiveType = (val) =>
   typeof val === 'string' || typeof val === 'number';
 
 const JSON_COLUMN_TYPES = [UITypes.Button];
+
+const ORDER_STEP_INCREMENT = 1;
 
 export async function populatePk(
   context: NcContext,
@@ -125,7 +129,8 @@ export async function getColumnName(
 ) {
   if (
     !isCreatedOrLastModifiedTimeCol(column) &&
-    !isCreatedOrLastModifiedByCol(column)
+    !isCreatedOrLastModifiedByCol(column) &&
+    !isOrderCol(column)
   )
     return column.column_name;
   columns =
@@ -161,6 +166,13 @@ export async function getColumnName(
       );
       if (lastModifiedBySystemCol) return lastModifiedBySystemCol.column_name;
       return column.column_name || 'updated_by';
+    }
+    case UITypes.Order: {
+      const orderSystemCol = columns.find(
+        (col) => col.system && col.uidt === UITypes.Order,
+      );
+      if (orderSystemCol) return orderSystemCol.column_name;
+      return column.column_name || 'nc_order';
     }
     default:
       return column.column_name;
@@ -245,11 +257,13 @@ class BaseModelSqlv2 {
       getHiddenColumn = false,
       throwErrorIfInvalidParams = false,
       extractOnlyPrimaries = false,
+      extractOrderColumn = false,
     }: {
       ignoreView?: boolean;
       getHiddenColumn?: boolean;
       throwErrorIfInvalidParams?: boolean;
       extractOnlyPrimaries?: boolean;
+      extractOrderColumn?: boolean;
     } = {},
   ): Promise<any> {
     const qb = this.dbDriver(this.tnPath);
@@ -263,6 +277,7 @@ class BaseModelSqlv2 {
       getHiddenColumn,
       throwErrorIfInvalidParams,
       extractOnlyPrimaries,
+      extractOrderColumn,
     });
 
     await this.selectObject({
@@ -5304,6 +5319,8 @@ class BaseModelSqlv2 {
     try {
       const columns = await this.model.getColumns(this.context);
 
+      let order = await this.getHighestOrderInTable();
+
       const insertedDatas = [];
       const updatedDatas = [];
 
@@ -5334,7 +5351,10 @@ class BaseModelSqlv2 {
         if (pkValues !== 'N/A' && pkValues !== undefined) {
           dataWithPks.push({ pk: pkValues, data });
         } else {
-          await this.prepareNocoData(data, true, cookie);
+          await this.prepareNocoData(data, true, cookie, null, {
+            ncOrder: order,
+          });
+          order++;
           // const insertObj = this.handleValidateBulkInsert(data, columns);
           dataWithoutPks.push(data);
         }
@@ -5357,7 +5377,10 @@ class BaseModelSqlv2 {
           await this.prepareNocoData(data, false, cookie);
           toUpdate.push(data);
         } else {
-          await this.prepareNocoData(data, true, cookie);
+          await this.prepareNocoData(data, true, cookie, null, {
+            ncOrder: order,
+          });
+          order++;
           // const insertObj = this.handleValidateBulkInsert(data, columns);
           toInsert.push(data);
         }
@@ -5535,7 +5558,7 @@ class BaseModelSqlv2 {
         if (
           col.system &&
           !allowSystemColumn &&
-          col.uidt !== UITypes.ForeignKey
+          [UITypes.ForeignKey, UITypes.Order].includes(col.uidt)
         ) {
           NcError.badRequest(
             `Column "${col.title}" is system column and cannot be updated`,
@@ -5686,14 +5709,18 @@ class BaseModelSqlv2 {
       if (!raw) {
         const columns = await this.model.getColumns(this.context);
 
+        const order = await this.getHighestOrderInTable();
+
         const nestedCols = columns.filter((c) => isLinksOrLTAR(c));
 
-        for (const d of datas) {
+        for (const [index, d] of datas.entries()) {
           const insertObj = await this.handleValidateBulkInsert(d, columns, {
             allowSystemColumn,
           });
 
-          await this.prepareNocoData(insertObj, true, cookie);
+          await this.prepareNocoData(insertObj, true, cookie, null, {
+            ncOrder: order + index,
+          });
 
           // prepare nested link data for insert only if it is single record insertion
           if (isSingleRecordInsertion) {
@@ -5715,8 +5742,16 @@ class BaseModelSqlv2 {
       } else {
         await this.model.getColumns(this.context);
 
+        const order = await this.getHighestOrderInTable();
+
         await Promise.all(
-          insertDatas.map((d) => this.prepareNocoData(d, true, cookie)),
+          insertDatas.map(
+            async (d, i) =>
+              await this.prepareNocoData(d, true, cookie, null, {
+                raw,
+                ncOrder: order + i,
+              }),
+          ),
         );
       }
 
@@ -5935,7 +5970,7 @@ class BaseModelSqlv2 {
             }
           }
         } else {
-          await this.prepareNocoData(d, false, cookie);
+          await this.prepareNocoData(d, false, cookie, null, { raw });
 
           const wherePk = await this._wherePk(pkValues, true);
 
@@ -6859,6 +6894,24 @@ class BaseModelSqlv2 {
         `Column "${column.title}" value exceeds the maximum length of ${column.dtxp}`,
       );
     }
+  }
+
+  public async getHighestOrderInTable() {
+    const orderColumn = this.model.columns.find(
+      (c) => c.uidt === UITypes.Order,
+    );
+
+    if (!orderColumn) {
+      return null;
+    }
+
+    const orderQuery = await this.dbDriver(this.tnPath)
+      .max(`${orderColumn.column_name} as max_order`)
+      .first();
+
+    const order = orderQuery ? orderQuery['max_order'] || '0' : '0';
+
+    return order + ORDER_STEP_INCREMENT;
   }
 
   // method for validating otpions if column is single/multi select
@@ -8628,23 +8681,25 @@ class BaseModelSqlv2 {
     jsonColumns: Record<string, any>[],
     d: Record<string, any>,
   ) {
-    try {
-      if (d) {
-        for (const col of jsonColumns) {
-          if (d[col.id] && typeof d[col.id] === 'string') {
+    if (d) {
+      for (const col of jsonColumns) {
+        if (d[col.id] && typeof d[col.id] === 'string') {
+          try {
             d[col.id] = JSON.parse(d[col.id]);
-          }
+          } catch {}
+        }
 
-          if (d[col.id]?.length) {
-            for (let i = 0; i < d[col.id].length; i++) {
-              if (typeof d[col.id][i] === 'string') {
+        if (d[col.id]?.length) {
+          for (let i = 0; i < d[col.id].length; i++) {
+            if (typeof d[col.id][i] === 'string') {
+              try {
                 d[col.id][i] = JSON.parse(d[col.id][i]);
-              }
+              } catch {}
             }
           }
         }
       }
-    } catch {}
+    }
     return d;
   }
 
@@ -8671,13 +8726,16 @@ class BaseModelSqlv2 {
 
       for (const col of columns) {
         if (col.uidt === UITypes.Lookup) {
+          const lookupNestedCol = await this.getNestedColumn(col);
+
           if (
-            JSON_COLUMN_TYPES.includes((await this.getNestedColumn(col))?.uidt)
+            JSON_COLUMN_TYPES.includes(lookupNestedCol.uidt) ||
+            isAIPromptCol(lookupNestedCol)
           ) {
             jsonCols.push(col);
           }
         } else {
-          if (JSON_COLUMN_TYPES.includes(col.uidt)) {
+          if (JSON_COLUMN_TYPES.includes(col.uidt) || isAIPromptCol(col)) {
             jsonCols.push(col);
           }
         }
@@ -9766,7 +9824,8 @@ class BaseModelSqlv2 {
     cookie?: { user?: any; system?: boolean },
     // oldData uses title as key where as data uses column_name as key
     oldData?,
-  ) {
+    extra?: { raw?: boolean; ncOrder?: number },
+  ): Promise<void> {
     for (const column of this.model.columns) {
       if (
         ![
@@ -9777,7 +9836,11 @@ class BaseModelSqlv2 {
           UITypes.LastModifiedTime,
           UITypes.CreatedBy,
           UITypes.LastModifiedBy,
-        ].includes(column.uidt)
+          UITypes.LongText,
+          UITypes.Order,
+        ].includes(column.uidt) ||
+        (column.uidt === UITypes.LongText &&
+          column.meta?.[LongTextAiMetaProp] !== true)
       )
         continue;
 
@@ -9787,6 +9850,9 @@ class BaseModelSqlv2 {
             data[column.column_name] = this.now();
           } else if (column.uidt === UITypes.CreatedBy) {
             data[column.column_name] = cookie?.user?.id;
+          } else if (column.uidt === UITypes.Order) {
+            data[column.column_name] =
+              extra?.ncOrder ?? (await this.getHighestOrderInTable());
           }
         }
         if (column.uidt === UITypes.LastModifiedTime) {
@@ -10045,6 +10111,48 @@ class BaseModelSqlv2 {
           typeof data[column.column_name] !== 'string'
         ) {
           data[column.column_name] = JSON.stringify(data[column.column_name]);
+        }
+      } else if (isAIPromptCol(column) && !extra?.raw) {
+        if (data[column.column_name]) {
+          let value = data[column.column_name];
+
+          if (typeof value === 'object') {
+            value = value.value;
+          }
+
+          const obj: {
+            value?: string;
+            lastModifiedBy?: string;
+            lastModifiedTime?: string;
+            isStale?: string;
+          } = {};
+
+          if (cookie?.system === true) {
+            Object.assign(obj, {
+              value,
+              lastModifiedBy: null,
+              lastModifiedTime: null,
+              isStale: false,
+            });
+          } else {
+            const oldObj = oldData?.[column.title];
+            const isStale = oldObj ? oldObj.isStale : false;
+
+            const isModified = oldObj?.value !== value;
+
+            Object.assign(obj, {
+              value,
+              lastModifiedBy: isModified
+                ? cookie?.user?.id
+                : oldObj?.lastModifiedBy,
+              lastModifiedTime: isModified
+                ? this.now()
+                : oldObj?.lastModifiedTime,
+              isStale: isModified ? false : isStale,
+            });
+          }
+
+          data[column.column_name] = JSON.stringify(obj);
         }
       }
     }
@@ -10314,6 +10422,7 @@ function shouldSkipField(
     return !fieldsSet.has(column.title);
   } else {
     if (column.system && isCreatedOrLastModifiedByCol(column)) return true;
+    if (column.system && isOrderCol(column)) return true;
     if (!extractPkAndPv) {
       if (!(viewOrTableColumn instanceof Column)) {
         if (

@@ -247,9 +247,15 @@ useSelectedCellKeyupListener(activeCell, (e) => {
 })
 
 // close dropdown list on escape
-useSelectedCellKeyupListener(isOpen, (e) => {
-  if (e.key === 'Escape') isOpen.value = false
-})
+useSelectedCellKeyupListener(
+  isOpen,
+  (e) => {
+    if (e.key === 'Escape') isOpen.value = false
+  },
+  {
+    isGridCell: false,
+  },
+)
 
 const search = () => {
   searchVal.value = aselect.value?.$el?.querySelector('.ant-select-selection-search-input')?.value
@@ -397,7 +403,7 @@ const isCollaborator = (userIdOrEmail) => {
         :style="{
           'display': '-webkit-box',
           'max-width': '100%',
-          '-webkit-line-clamp': rowHeightTruncateLines(rowHeight),
+          '-webkit-line-clamp': rowHeightTruncateLines(rowHeight, true),
           '-webkit-box-orient': 'vertical',
           'overflow': 'hidden',
         }"

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  ButtonActionsType,
   type ButtonType,
   type ColumnReqType,
   type ColumnType,
@@ -8,6 +7,7 @@ import {
   UITypes,
   type ViewType,
   ViewTypes,
+  isAIPromptCol,
   isCreatedOrLastModifiedByCol,
   isCreatedOrLastModifiedTimeCol,
   isLinksOrLTAR,
@@ -144,6 +144,8 @@ const { loadViewAggregate } = useViewAggregateOrThrow()
 
 const { generateRows, generatingRows, generatingColumnRows, generatingColumns, aiIntegrations } = useNocoAi()
 
+const { isFeatureEnabled } = useBetaFeatureToggle()
+
 // Element refs
 const smartTable = ref(null)
 
@@ -195,6 +197,8 @@ const onXcResizing = (cn: string | undefined, event: any) => {
 
   const size = event.detail.split('px')[0]
   gridViewCols.value[cn].width = `${normalizedWidth(metaColumnById.value[cn], size)}px`
+
+  refreshFillHandle()
 }
 
 const onXcStartResizing = (cn: string | undefined, event: any) => {
@@ -743,6 +747,7 @@ const {
   makeActive,
   selectedRange,
   isFillMode,
+  metaKey,
 } = useMultiSelect(
   meta,
   fields,
@@ -1024,8 +1029,8 @@ const isSelectedOnlyAI = computed(() => {
   if (selectedRange.start.col === selectedRange.end.col) {
     const field = fields.value[selectedRange.start.col]
     return {
-      enabled: field.uidt === UITypes.Button && (field?.colOptions as ButtonType)?.type === ButtonActionsType.Ai,
-      disabled: !ncIsArrayIncludes(aiIntegrations.value, (field?.colOptions as ButtonType)?.fk_integration_id, 'id'),
+      enabled: isAIPromptCol(field) || isAiButton(field),
+      disabled: !(field?.colOptions as ButtonType)?.fk_integration_id,
     }
   }
 
@@ -1034,6 +1039,8 @@ const isSelectedOnlyAI = computed(() => {
     disabled: false,
   }
 })
+
+const isAIFillMode = computed(() => metaKey.value && isFeatureEnabled(FEATURE_FLAG.AI_FEATURES))
 
 const generateAIBulk = async () => {
   if (!isSelectedOnlyAI.value.enabled || !meta?.value?.id || !meta.value.columns) return
@@ -1048,9 +1055,7 @@ const generateAIBulk = async () => {
 
   let outputColumnIds = [field.id]
 
-  const isAiButton = field.uidt === UITypes.Button && (field?.colOptions as ButtonType)?.type === ButtonActionsType.Ai
-
-  if (isAiButton) {
+  if (isAiButton(field)) {
     outputColumnIds =
       ncIsString(field.colOptions?.output_column_ids) && field.colOptions.output_column_ids.split(',').length > 0
         ? field.colOptions.output_column_ids.split(',')
@@ -1436,7 +1441,7 @@ const leftOffset = computed(() => {
 const fillHandleTop = ref()
 const fillHandleLeft = ref()
 
-const refreshFillHandle = () => {
+function refreshFillHandle() {
   const rowIndex = isNaN(selectedRange.end.row) ? activeCell.row : selectedRange.end.row
   const colIndex = isNaN(selectedRange.end.col) ? activeCell.col : selectedRange.end.col
   if (rowIndex !== null && colIndex !== null) {
@@ -1898,7 +1903,7 @@ watch(vSelectedAllRecords, (selectedAll) => {
                   </template>
                 </th>
                 <th
-                  v-if="fields[0] && fields[0].id"
+                  v-if="fields?.[0]?.id"
                   ref="primaryColHeader"
                   v-xc-ver-resize
                   :data-col="fields[0].id"
@@ -2248,13 +2253,13 @@ watch(vSelectedAllRecords, (selectedAll) => {
                             </span>
                             <div
                               v-else-if="!row.rowMeta?.saving && !row.rowMeta?.isLoading"
-                              class="cursor-pointer flex items-center border-1 border-gray-100 active:ring rounded p-1 hover:(bg-gray-50)"
+                              class="cursor-pointer flex items-center border-1 border-gray-100 active:ring rounded-md p-1 hover:(bg-white border-nc-border-gray-medium)"
                             >
                               <component
-                                :is="iconMap.expand"
+                                :is="iconMap.maximize"
                                 v-if="expandForm"
                                 v-e="['c:row-expand:open']"
-                                class="select-none transform hover:(text-black scale-120) nc-row-expand"
+                                class="select-none transform nc-row-expand opacity-90 w-4 h-4"
                                 @click="expandAndLooseFocus(row, state)"
                               />
                             </div>
@@ -2267,7 +2272,7 @@ watch(vSelectedAllRecords, (selectedAll) => {
                         class="cell relative nc-grid-cell cursor-pointer"
                         :class="{
                           'active': selectRangeMap[`${row.rowMeta.rowIndex}-0`],
-                          'active-cell !after:h-[calc(100%-2px)]':
+                          'active-cell !after:h-[calc(100%-1px)]':
                             (activeCell.row === row.rowMeta.rowIndex && activeCell.col === 0) ||
                             (selectedRange._start?.row === row.rowMeta.rowIndex && selectedRange._start?.col === 0),
                           'nc-required-cell':
@@ -2437,11 +2442,11 @@ watch(vSelectedAllRecords, (selectedAll) => {
               v-show="showFillHandle"
               ref="fillHandle"
               class="nc-fill-handle"
-              :class="
-                (!selectedRange.isEmpty() && selectedRange.end.col !== 0) || (selectedRange.isEmpty() && activeCell.col !== 0)
-                  ? 'z-3'
-                  : 'z-4'
-              "
+              :class="{
+                'z-3': !selectedRange.isEmpty() && selectedRange.end.col !== 0,
+                'z-4': selectedRange.isEmpty() && activeCell.col !== 0,
+                'transition-all !bg-purple-400 !w-[10px] !h-[10px] !mt-[-5px] !ml-[-5px]': isAIFillMode,
+              }"
               :style="{
                 top: `${fillHandleTop}px`,
                 left: `${fillHandleLeft}px`,
@@ -2726,10 +2731,18 @@ watch(vSelectedAllRecords, (selectedAll) => {
 
     &.align-top {
       @apply py-2;
+
+      &:has(.nc-cell.nc-cell-longtext textarea) {
+        @apply py-0 pr-0;
+      }
     }
 
     &.align-middle {
       @apply py-0;
+
+      &:has(.nc-cell.nc-cell-longtext textarea) {
+        @apply pr-0;
+      }
     }
 
     & > div {
@@ -2755,7 +2768,7 @@ watch(vSelectedAllRecords, (selectedAll) => {
       .nc-cell-field,
       input,
       textarea {
-        @apply !text-small !p-0 m-0;
+        @apply !text-small !pl-0 !py-0 m-0;
       }
 
       &:not(.nc-display-value-cell) {
@@ -2774,7 +2787,7 @@ watch(vSelectedAllRecords, (selectedAll) => {
       a.nc-cell-field-link,
       input,
       textarea {
-        @apply !p-0 m-0;
+        @apply !pl-0 !py-0 m-0;
       }
 
       a.nc-cell-field-link {
@@ -2788,7 +2801,7 @@ watch(vSelectedAllRecords, (selectedAll) => {
         @apply leading-[18px];
 
         textarea {
-          @apply pr-2;
+          @apply pr-8 !py-2;
         }
       }
 
