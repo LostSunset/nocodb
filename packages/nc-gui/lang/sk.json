@@ -653,6 +653,8 @@
     "lockedByUser": "Locked by {user}"
   },
   "labels": {
+    "enableSnowFall": "Enable Snowfall",
+    "disableSnowFall": "Disable Snowfall",
     "snapshotCreationFailed": "Snapshot creation failed",
     "snapshotCreationFailedDescription": "Failed to create your base snapshot. Try again later.",
     "snapshotCooldownDescription": "Snapshots can only be taken three hours apart.",
@@ -805,7 +807,7 @@
     "icon": "Ikona",
     "max": "Maximum",
     "enableRichText": "Povoliť formátovaný text",
-    "idColon": "Id: {id}",
+    "idColon": "FIELD ID: {id}",
     "copiedRecordURL": "Adresa skopírovaného záznamu",
     "copyRecordURL": "Kopírovať adresu URL záznamu",
     "duplicateRecord": "Duplikovať záznam",
