@@ -93,6 +93,7 @@
     "none": "Hiçbiri"
   },
   "general": {
+    "usage": "Usage",
     "snapshot": "Snapshot",
     "snapshots": "Snapshots",
     "baseSnapshots": "Base Snapshots",
@@ -140,6 +141,7 @@
     "clear": "Temizle",
     "slack": "Slack",
     "comment": "Yorum",
+    "comments": "Comments",
     "microsoftTeams": "Microsoft Teams",
     "discord": "Discord",
     "matterMost": "Mattermost",
@@ -171,6 +173,7 @@
     "updating": "Güncelleniyor",
     "rename": "Yeniden Adlandır",
     "renameEntity": "{entity} yeniden adlandır",
+    "untitledEntity": "Untitled {entity}",
     "reload": "Yenile",
     "refresh": "Yenile",
     "reset": "Sıfırla",
@@ -301,7 +304,9 @@
     "enable": "Enable",
     "poweredBy": "Powered by",
     "nocoAI": "Noco AI",
-    "you": "You"
+    "you": "You",
+    "read": "Read",
+    "unread": "Unread"
   },
   "objects": {
     "files": "dosyalar",
@@ -313,6 +318,8 @@
     "year": "Yıl",
     "workspace": "Çalışma Alanı",
     "workspaces": "Çalışma Alanları",
+    "document": "Document",
+    "documents": "Documents",
     "project": "Proje",
     "projects": "Projeler",
     "table": "Tablo",
@@ -530,6 +537,7 @@
     "displayValue": "Gösterge Değeri",
     "expand": "Genişlet",
     "hideAll": "Tümünü gizle",
+    "systemFields": "System fields",
     "hideSystemFields": "Sistem alanlarını gizle",
     "removeFile": "Dosyayı Kaldır",
     "hasMany": "Birden Çoğa",
@@ -575,7 +583,8 @@
     "uiACL": "UI Erişim Kontrolü",
     "metaOperations": "Metaveri İşlemleri",
     "audit": "Denetim",
-    "auditLogs": "Denetim günlüğü",
+    "audits": "Audits",
+    "auditLogs": "Audit Logs",
     "sqlMigrations": "SQL Aktarımı",
     "dbCredentials": "Veritabanı Kimlik Bilgileri",
     "advancedParameters": "SSL & Gelişmiş parametreler",
@@ -635,6 +644,9 @@
     "categories": "Kategoriler",
     "fieldInaccessible": "Alan erişilemez",
     "noConditionsAdded": "Koşul eklenmedi",
+    "thisUrlIsAvailable": "This URL is available",
+    "thisUrlIsUnavailable": "This URL is unavailable",
+    "checkingUrlAvailability": "Checking URL availability",
     "noAiIntegrationAvailable": "No AI Integrations available.",
     "nocoAiBaseBuilder": "Noco AI Base Builder",
     "additionalDetails": "Additional Details",
@@ -650,9 +662,18 @@
     "thisFormIsLocked": "This Form is currently locked",
     "unlockThisVieToMakeChanges": "Unlock this view to make changes",
     "yourBaseRole": "Your base role",
-    "lockedByUser": "Locked by {user}"
+    "lockedByUser": "Locked by {user}",
+    "thisPageDoesNotExist": "This page doesn’t exist",
+    "customUrl": "Custom URL"
   },
   "labels": {
+    "noImage": "No Image",
+    "quickNavigation": "Quick Navigation",
+    "recent": "Recent",
+    "limitRecordSelectionToView": "Limit record selection to a view",
+    "limitRecordSelectionToFilters": "Limit record selection to filters",
+    "addedBy": "Added by",
+    "whatsNew": "What's New!",
     "enableSnowFall": "Enable Snowfall",
     "disableSnowFall": "Disable Snowfall",
     "snapshotCreationFailed": "Snapshot creation failed",
@@ -698,7 +719,7 @@
     "addNewLookupHelperText1": "Bakış alanları bağlı kayıtların verilerini gösterir. Belirli alanları seçin ",
     "addNewLookupHelperText2": " bu tabloya Bakış alanları olarak eklemek için tabloyu seçin.",
     "formatting": "Biçimlendirme",
-    "selectAFormatType": "- -Bir biçim türü seç (isteğe bağlı)- -",
+    "selectAFormatType": "- -Select a format type (optional)- -",
     "formatType": "Biçim türü",
     "toUpload": "yüklemek için",
     "dragFilesHere": "dosyaları buraya sürükleyin",
@@ -755,7 +776,7 @@
     "deleteUserAndData": "Kullanıcıyı ve verilerini sil",
     "userOptions": "Kullanıcı Seçenekleri",
     "deleteThisOrganization": "Bu Kuruluşu Sil",
-    "dangerZone": "Tehlike Alanı",
+    "dangerZone": "Danger Zone",
     "childView": "Alt Görünüm",
     "selectYear": "Yıl Seçin",
     "save": "Kaydet",
@@ -1070,6 +1091,14 @@
     "viewHide": "View visibility "
   },
   "activity": {
+    "clickToResolve": "Click to resolve",
+    "resolvedBy": "Resolved by",
+    "leaveWorkspace": "Leave workspace",
+    "removeUser": "Remove user",
+    "filterByThisField": "Filter by this field",
+    "groupByThisField": "Group by this field",
+    "addToStarred": "Add to starred",
+    "removeFromStarred": "Remove from starred",
     "deleteAllRecords": "Delete all records",
     "assignView": "Assign view",
     "webhookDetails": "Webhook Detayları",
@@ -1336,6 +1365,7 @@
     "pending": "Pending"
   },
   "tooltip": {
+    "leaveWorkspace": "Each workspace must have at least one owner. Please assign another user as the Owner before leaving the workspace. If you are the last member, consider deleting the workspace instead.",
     "currentDateNotAvail": "Geçerli tarih seçeneği veri kaynağı veya veri türü için mevcut değil",
     "privateConnection": "Bu bağlantıyı özel ve bu çalışma alanındaki diğer yaratıcıların erişimine kapalı yapmak için etkinleştirin.",
     "optionalDatabaseName": "Opsiyonel. Boş bırakıldığında \"{database}\" varsayılan veritabanını kullanır",
@@ -1423,6 +1453,7 @@
     "filterQuery": "Filtre sorgusu",
     "selectField": "Sütunu seç",
     "precision": "Precision",
+    "decimal0": "1",
     "decimal1": "1.0",
     "decimal2": "1.00",
     "decimal3": "1.000",
@@ -1443,6 +1474,10 @@
     "lockViewDescription": "Explain why you’re locking this view. This message will be shown when anyone tries to unlock this view (optional)."
   },
   "msg": {
+    "deleteAccountPermanently": "Delete your account permanently",
+    "learnMore": "Learn more",
+    "connectIntegrations": "Connect integrations with NocoDB.",
+    "manageConnections": "Manage connections for your integrations.",
     "invalidConfiguration": "Geçersiz buton yapılandırması",
     "invalidColumnConfiguration": "Geçersiz alan yapılandırması",
     "invalidTheme": "Geçerli bir tema seçin",
@@ -1586,6 +1621,10 @@
       }
     },
     "info": {
+      "inviteSent": "Invitation sent successfully",
+      "userRoleUpdated": "User role updated successfully",
+      "actionIrreversible": "This action is irreversible",
+      "deleteAccount": "Deleting your account will permanently remove any Workspaces and Bases where you are the sole owner. For all other cases, your access permissions will be revoked.",
       "calendarReadOnly": "Hesaplanmış veya sistem alanları kullanıldığında tarih arası kayıtlarda sürükleme yapamayacaksınız.",
       "schemaReadOnly": "Bu kaynak için şema değişiklikleri devre dışı bırakıldı",
       "enterWorkspaceName": "Çalışma alanı adını girin",
@@ -1768,7 +1807,8 @@
       "thisFeatureIsOnlyAvailableInEnterpriseEdition": "Bu özellik yalnızca enterprise edition'da mevcuttur",
       "yourCurrentRoleIs": "Mevcut rolünüz",
       "pleaseRequestAccessForView": "Bu {viewName} erişimi sağlamak için Yönetici / Veri Tabanı Sahibi / Çalışma Alanı Sahibi'nden daha yüksek izin talebinde bulunun",
-      "preventHideAllOptions": "Alan zorunlu ise tüm seçenekler gizlenemez"
+      "preventHideAllOptions": "Alan zorunlu ise tüm seçenekler gizlenemez",
+      "valueMustBeAtMostCharLong": "Value must be at most {length} characters long"
     },
     "error": {
       "manualTriggerHook": "Elle tetiklenen bağlantılar devre dışı bırakılamaz",
@@ -1869,7 +1909,10 @@
       "somethingWentWrong": "Bir hata oluştu",
       "draggedContentIsNotTypeOfImage": "Sürüklenen içerik resim türünde değil",
       "fieldToParseImageData": "Resim verilerini işlemek için sütun",
-      "someOfTheRequiredFieldsAreEmpty": "Gerekli alanların bazıları boş"
+      "someOfTheRequiredFieldsAreEmpty": "Gerekli alanların bazıları boş",
+      "columnVisibilityUpdateFailed": "Failed to update field visibility",
+      "unsupportedCharacter": "Unsupported character: {char}",
+      "unsupportedCharacters": "Unsupported characters: {char}"
     },
     "toast": {
       "exportMetadata": "Proje metaverileri başarıyla dışa aktarıldı",
@@ -1929,6 +1972,11 @@
       "roleUpdated": "Rol başarıyla güncellendi",
       "connectionAdded": "Entegrasyon başarıyla bağlandı",
       "connectionAddedDesc": "Taban sahipleri ve yaratıcılar artık kimlik bilgilerini yeniden girmeden bir veri kaynağı ekleyebilir."
+    },
+    "subText": {
+      "createNewTable": "Start from scratch.",
+      "importData": "From files & external sources.",
+      "connectExternalData": "In realtime to external databases."
     }
   }
 }

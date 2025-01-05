@@ -93,6 +93,7 @@
     "none": "Ingen"
   },
   "general": {
+    "usage": "Usage",
     "snapshot": "Snapshot",
     "snapshots": "Snapshots",
     "baseSnapshots": "Base Snapshots",
@@ -140,6 +141,7 @@
     "clear": "Rensa",
     "slack": "Slack",
     "comment": "Kommentar",
+    "comments": "Comments",
     "microsoftTeams": "Microsoft Teams",
     "discord": "Discord",
     "matterMost": "Mattermost",
@@ -171,6 +173,7 @@
     "updating": "Uppdaterar",
     "rename": "Döp om",
     "renameEntity": "Byt namn på {entity}",
+    "untitledEntity": "Untitled {entity}",
     "reload": "Ladda om",
     "refresh": "Uppdatera",
     "reset": "Återställ",
@@ -301,7 +304,9 @@
     "enable": "Enable",
     "poweredBy": "Powered by",
     "nocoAI": "Noco AI",
-    "you": "You"
+    "you": "You",
+    "read": "Read",
+    "unread": "Unread"
   },
   "objects": {
     "files": "filer",
@@ -313,6 +318,8 @@
     "year": "År",
     "workspace": "Arbetsyta",
     "workspaces": "Arbetsytor",
+    "document": "Document",
+    "documents": "Documents",
     "project": "Projekt",
     "projects": "Projekt",
     "table": "Tabell",
@@ -530,6 +537,7 @@
     "displayValue": "Visa värde",
     "expand": "Expandera",
     "hideAll": "Göm alla",
+    "systemFields": "System fields",
     "hideSystemFields": "Dölj systemfält",
     "removeFile": "Ta bort fil",
     "hasMany": "Har många",
@@ -575,6 +583,7 @@
     "uiACL": "UI-åtkomstkontroll",
     "metaOperations": "Metadataoperationer",
     "audit": "Granska",
+    "audits": "Audits",
     "auditLogs": "Audit Logs",
     "sqlMigrations": "SQL-migreringar",
     "dbCredentials": "Databasuppgifter",
@@ -635,6 +644,9 @@
     "categories": "Kategorier",
     "fieldInaccessible": "Fält otillgängligt",
     "noConditionsAdded": "Inga villkor har lagts till",
+    "thisUrlIsAvailable": "This URL is available",
+    "thisUrlIsUnavailable": "This URL is unavailable",
+    "checkingUrlAvailability": "Checking URL availability",
     "noAiIntegrationAvailable": "No AI Integrations available.",
     "nocoAiBaseBuilder": "Noco AI Base Builder",
     "additionalDetails": "Additional Details",
@@ -650,9 +662,18 @@
     "thisFormIsLocked": "This Form is currently locked",
     "unlockThisVieToMakeChanges": "Unlock this view to make changes",
     "yourBaseRole": "Your base role",
-    "lockedByUser": "Locked by {user}"
+    "lockedByUser": "Locked by {user}",
+    "thisPageDoesNotExist": "This page doesn’t exist",
+    "customUrl": "Custom URL"
   },
   "labels": {
+    "noImage": "No Image",
+    "quickNavigation": "Quick Navigation",
+    "recent": "Recent",
+    "limitRecordSelectionToView": "Limit record selection to a view",
+    "limitRecordSelectionToFilters": "Limit record selection to filters",
+    "addedBy": "Added by",
+    "whatsNew": "What's New!",
     "enableSnowFall": "Enable Snowfall",
     "disableSnowFall": "Disable Snowfall",
     "snapshotCreationFailed": "Snapshot creation failed",
@@ -698,7 +719,7 @@
     "addNewLookupHelperText1": "Uppslagsfält visar data från länkade poster. Välj specifika fält från ",
     "addNewLookupHelperText2": " tabell för att lägga till dem som uppslagsfält i denna tabell.",
     "formatting": "Formatering",
-    "selectAFormatType": "- -Välj en formaterings typ (valfritt)- -",
+    "selectAFormatType": "- -Select a format type (optional)- -",
     "formatType": "Formateringstyp",
     "toUpload": "för att ladda upp",
     "dragFilesHere": "dra filer hit",
@@ -755,7 +776,7 @@
     "deleteUserAndData": "Radera användare och dess data",
     "userOptions": "Användaralternativ",
     "deleteThisOrganization": "Radera denna Organisation",
-    "dangerZone": "Farozon",
+    "dangerZone": "Danger Zone",
     "childView": "Underordnad vy",
     "selectYear": "Välj År",
     "save": "Spara",
@@ -1070,6 +1091,14 @@
     "viewHide": "View visibility "
   },
   "activity": {
+    "clickToResolve": "Click to resolve",
+    "resolvedBy": "Resolved by",
+    "leaveWorkspace": "Leave workspace",
+    "removeUser": "Remove user",
+    "filterByThisField": "Filter by this field",
+    "groupByThisField": "Group by this field",
+    "addToStarred": "Add to starred",
+    "removeFromStarred": "Remove from starred",
     "deleteAllRecords": "Delete all records",
     "assignView": "Assign view",
     "webhookDetails": "Webhook Detaljer",
@@ -1336,6 +1365,7 @@
     "pending": "Pending"
   },
   "tooltip": {
+    "leaveWorkspace": "Each workspace must have at least one owner. Please assign another user as the Owner before leaving the workspace. If you are the last member, consider deleting the workspace instead.",
     "currentDateNotAvail": "Current date option not available for this data source / data type",
     "privateConnection": "Aktivera för att göra denna anslutning privat och dold från andra skapare i denna arbetsyta.",
     "optionalDatabaseName": "Valfritt. Använder standarddatabas \"{database}\" om den lämnas tom",
@@ -1423,6 +1453,7 @@
     "filterQuery": "Filtersökning",
     "selectField": "Välj fält",
     "precision": "Precision",
+    "decimal0": "1",
     "decimal1": "1.0",
     "decimal2": "1.00",
     "decimal3": "1.000",
@@ -1443,6 +1474,10 @@
     "lockViewDescription": "Explain why you’re locking this view. This message will be shown when anyone tries to unlock this view (optional)."
   },
   "msg": {
+    "deleteAccountPermanently": "Delete your account permanently",
+    "learnMore": "Learn more",
+    "connectIntegrations": "Connect integrations with NocoDB.",
+    "manageConnections": "Manage connections for your integrations.",
     "invalidConfiguration": "Ogiltig knappkonfiguration",
     "invalidColumnConfiguration": "Ogiltig fältkonfiguration",
     "invalidTheme": "Välj ett giltigt tema",
@@ -1586,6 +1621,10 @@
       }
     },
     "info": {
+      "inviteSent": "Invitation sent successfully",
+      "userRoleUpdated": "User role updated successfully",
+      "actionIrreversible": "This action is irreversible",
+      "deleteAccount": "Deleting your account will permanently remove any Workspaces and Bases where you are the sole owner. For all other cases, your access permissions will be revoked.",
       "calendarReadOnly": "Du kommer inte kunna dra poster mellan datum när beräknade eller systemfält används.",
       "schemaReadOnly": "Schemaändringar är inaktiverade för denna källa",
       "enterWorkspaceName": "Ange arbetsytans namn",
@@ -1768,7 +1807,8 @@
       "thisFeatureIsOnlyAvailableInEnterpriseEdition": "Denna funktion är endast tillgänglig i Enterprise Edition",
       "yourCurrentRoleIs": "Din nuvarande roll är",
       "pleaseRequestAccessForView": "Vänligen begär högre behörighet från Admin / Base-ägare / Arbetsytesägare för att få åtkomst till detta {viewName}",
-      "preventHideAllOptions": "Du kan inte dölja alla alternativ om fältet är obligatoriskt"
+      "preventHideAllOptions": "Du kan inte dölja alla alternativ om fältet är obligatoriskt",
+      "valueMustBeAtMostCharLong": "Value must be at most {length} characters long"
     },
     "error": {
       "manualTriggerHook": "Manuella krokar kan inte inaktiveras",
@@ -1869,7 +1909,10 @@
       "somethingWentWrong": "Något gick fel",
       "draggedContentIsNotTypeOfImage": "Dra innehåll är inte av bilden typ",
       "fieldToParseImageData": "Fält för att tolka bilddata",
-      "someOfTheRequiredFieldsAreEmpty": "Vissa av de obligatoriska fälten är tomma"
+      "someOfTheRequiredFieldsAreEmpty": "Vissa av de obligatoriska fälten är tomma",
+      "columnVisibilityUpdateFailed": "Failed to update field visibility",
+      "unsupportedCharacter": "Unsupported character: {char}",
+      "unsupportedCharacters": "Unsupported characters: {char}"
     },
     "toast": {
       "exportMetadata": "Projektmetadata exporterades framgångsrikt",
@@ -1929,6 +1972,11 @@
       "roleUpdated": "Rollen har uppdaterats framgångsrikt",
       "connectionAdded": "Integrering ansluten framgångsrikt",
       "connectionAddedDesc": "Databaskreatörer och ägare kan nu lägga till en datakälla utan att ange inloggningsuppgifter igen."
+    },
+    "subText": {
+      "createNewTable": "Start from scratch.",
+      "importData": "From files & external sources.",
+      "connectExternalData": "In realtime to external databases."
     }
   }
 }

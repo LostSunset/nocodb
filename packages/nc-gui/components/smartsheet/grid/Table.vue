@@ -1922,7 +1922,7 @@ onKeyStroke('ArrowDown', onDown)
                     <a-dropdown
                       v-model:visible="addColumnDropdown"
                       :trigger="['click']"
-                      overlay-class-name="nc-dropdown-grid-add-column"
+                      overlay-class-name="nc-dropdown-add-column"
                       @visible-change="onVisibilityChange"
                     >
                       <div class="h-full w-[60px] flex items-center justify-center">
@@ -2620,7 +2620,7 @@ onKeyStroke('ArrowDown', onDown)
             size="small"
             type="secondary"
             :shadow="false"
-            @click="onNewRecordToFormClick()"
+            @click.stop="onNewRecordToFormClick()"
           >
             <div class="flex items-center gap-2">
               <GeneralIcon icon="plus" />
@@ -2635,7 +2635,7 @@ onKeyStroke('ArrowDown', onDown)
             size="small"
             type="secondary"
             :shadow="false"
-            @click="isAddNewRecordGridMode ? addEmptyRow() : onNewRecordToFormClick()"
+            @click.stop="isAddNewRecordGridMode ? addEmptyRow() : onNewRecordToFormClick()"
           >
             <div data-testid="nc-pagination-add-record" class="flex items-center gap-2">
               <GeneralIcon icon="plus" />

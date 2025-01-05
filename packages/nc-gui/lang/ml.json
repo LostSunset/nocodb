@@ -93,6 +93,7 @@
     "none": "ഒന്നുമില്ല"
   },
   "general": {
+    "usage": "Usage",
     "snapshot": "Snapshot",
     "snapshots": "Snapshots",
     "baseSnapshots": "Base Snapshots",
@@ -140,6 +141,7 @@
     "clear": "ശുദ്ധമാക്കുക",
     "slack": "Slack",
     "comment": "കമന്റുചെയ്യുക",
+    "comments": "Comments",
     "microsoftTeams": "Microsoft Teams",
     "discord": "Discord",
     "matterMost": "Mattermost",
@@ -171,6 +173,7 @@
     "updating": "നവീകരിക്കുന്നു",
     "rename": "പേരുമാറ്റം",
     "renameEntity": "{entity} പുനർനാമകരണം ചെയ്യുക",
+    "untitledEntity": "Untitled {entity}",
     "reload": "മറികിട്ടൽ",
     "refresh": "പുനരവതരിച്ചു",
     "reset": "റീസറ്റ്",
@@ -301,7 +304,9 @@
     "enable": "Enable",
     "poweredBy": "Powered by",
     "nocoAI": "Noco AI",
-    "you": "You"
+    "you": "You",
+    "read": "Read",
+    "unread": "Unread"
   },
   "objects": {
     "files": "ഫയലുകൾ",
@@ -313,6 +318,8 @@
     "year": "വർഷം",
     "workspace": "പ്രവർത്തനസ്ഥലം",
     "workspaces": "പ്രവർത്തനസ്ഥലങ്ങൾ",
+    "document": "Document",
+    "documents": "Documents",
     "project": "മേൽസ്ഥലം",
     "projects": "മേൽസ്ഥലങ്ങൾ",
     "table": "പട്ടിക",
@@ -530,6 +537,7 @@
     "displayValue": "പ്രദർശന മൂല്യം",
     "expand": "വിപുലീകരിക്കുക",
     "hideAll": "എല്ലാം മറച്ചുവെക്കുക",
+    "systemFields": "System fields",
     "hideSystemFields": "സിസ്റ്റം ഫീൽഡുകൾ മറച്ചു വെക്കുക",
     "removeFile": "ഫയൽ നീക്കം ചെയ്യുക",
     "hasMany": "പല",
@@ -575,7 +583,8 @@
     "uiACL": "യൂഐ ആക്‌സസ് കൺട്രോൾ",
     "metaOperations": "മെറ്റാഡാറ്റ ഓപ്പറേഷനുകൾ",
     "audit": "ഓഡിറ്റ്",
-    "auditLogs": "ഓഡിറ്റ് ലോഗ്",
+    "audits": "Audits",
+    "auditLogs": "Audit Logs",
     "sqlMigrations": "SQL മാറ്റങ്ങൾ",
     "dbCredentials": "ഡാറ്റാബേസ് പൂർത്തിയാക്കലുകൾ",
     "advancedParameters": "എസ്‌എസ്‌എല്ലും വികസിത പാരാമീറ്ററുകളും",
@@ -635,6 +644,9 @@
     "categories": "വിഭാഗങ്ങൾ",
     "fieldInaccessible": "ഫീൽഡ് ലഭ്യമല്ല",
     "noConditionsAdded": "ആവശ്യങ്ങൾ ഒന്നും ചേർക്കാത്തത്",
+    "thisUrlIsAvailable": "This URL is available",
+    "thisUrlIsUnavailable": "This URL is unavailable",
+    "checkingUrlAvailability": "Checking URL availability",
     "noAiIntegrationAvailable": "No AI Integrations available.",
     "nocoAiBaseBuilder": "Noco AI Base Builder",
     "additionalDetails": "Additional Details",
@@ -650,9 +662,18 @@
     "thisFormIsLocked": "This Form is currently locked",
     "unlockThisVieToMakeChanges": "Unlock this view to make changes",
     "yourBaseRole": "Your base role",
-    "lockedByUser": "Locked by {user}"
+    "lockedByUser": "Locked by {user}",
+    "thisPageDoesNotExist": "This page doesn’t exist",
+    "customUrl": "Custom URL"
   },
   "labels": {
+    "noImage": "No Image",
+    "quickNavigation": "Quick Navigation",
+    "recent": "Recent",
+    "limitRecordSelectionToView": "Limit record selection to a view",
+    "limitRecordSelectionToFilters": "Limit record selection to filters",
+    "addedBy": "Added by",
+    "whatsNew": "What's New!",
     "enableSnowFall": "Enable Snowfall",
     "disableSnowFall": "Disable Snowfall",
     "snapshotCreationFailed": "Snapshot creation failed",
@@ -698,7 +719,7 @@
     "addNewLookupHelperText1": "ലിങ്കുചെയ്ത റെക്കോർഡുകളിൽ നിന്ന് ഡാറ്റ കാണിക്കാൻ ലുക്കപ്പ് ഫീൽഡുകൾ ഉപയോഗിക്കുന്നു. പകുതിയിലായി നിൽക്കുന്ന ഫീൽഡുകൾ തിരഞ്ഞെടുക്കുക ",
     "addNewLookupHelperText2": " ടേബിളില്‍ ഇവയെ ലുക്ക്അപ്പ് ഫീല്‍ഡുകള്‍ ആയി കൂട്ടിച്ചേര്‍ക്കാൻ പ്രത്യേക ഫീല്‍ഡുകള്‍ തിരഞ്ഞെടുക്കുക.",
     "formatting": "ഫോർമാറ്റിംഗ്",
-    "selectAFormatType": "- -ഒരു ഫോർമാറ്റ് തരം തിരഞ്ഞെടുക്കുക (ഐച്ഛികം)- -",
+    "selectAFormatType": "- -Select a format type (optional)- -",
     "formatType": "ഫോർമാറ്റ് തരം",
     "toUpload": "അപ്‌ലോഡ് ചെയ്യാനുള്ളത്",
     "dragFilesHere": "ഫയലുകൾ ഇവിടെ വലയിടുക",
@@ -755,7 +776,7 @@
     "deleteUserAndData": "ഉപയോക്താവിനെയും അവരുടെ ഡാറ്റയെയും ഇല്ലാതാക്കുക",
     "userOptions": "ഉപയോക്തൃ ഓപ്ഷനുകൾ",
     "deleteThisOrganization": "ഈ സംഘടന ഇല്ലാതാക്കുക",
-    "dangerZone": "ആപൽ മേഖല",
+    "dangerZone": "Danger Zone",
     "childView": "കുട്ടികളുടെ കാഴ്ച",
     "selectYear": "വർഷം തിരഞ്ഞെടുക്കുക",
     "save": "രക്ഷിക്കുക",
@@ -1070,6 +1091,14 @@
     "viewHide": "View visibility "
   },
   "activity": {
+    "clickToResolve": "Click to resolve",
+    "resolvedBy": "Resolved by",
+    "leaveWorkspace": "Leave workspace",
+    "removeUser": "Remove user",
+    "filterByThisField": "Filter by this field",
+    "groupByThisField": "Group by this field",
+    "addToStarred": "Add to starred",
+    "removeFromStarred": "Remove from starred",
     "deleteAllRecords": "Delete all records",
     "assignView": "Assign view",
     "webhookDetails": "വെബ്‌ഹുക്ക് വിശദാംശങ്ങൾ",
@@ -1336,6 +1365,7 @@
     "pending": "Pending"
   },
   "tooltip": {
+    "leaveWorkspace": "Each workspace must have at least one owner. Please assign another user as the Owner before leaving the workspace. If you are the last member, consider deleting the workspace instead.",
     "currentDateNotAvail": "ഡാറ്റാ സ്രോതസ്സിനോ ഡാറ്റാ തരം കൊണ്ടോ നിലവിലെ ശൈലിയ്ക്ക് ഓപ്ഷൻ ലഭ്യമല്ല",
     "privateConnection": "ഈ കണക്ഷൻ സ്വകാര്യവും ഈ വർക്ക്‌‌സ്‌പേസിലെ മറ്റ് സ്രഷ്ടാക്കൾക്ക് മറഞ്ഞിരിക്കുന്നതും ആക്കാൻ പ്രാപ്തമാക്കുക.",
     "optionalDatabaseName": "ഐച്ഛികം. ഒഴിച്ചിട്ടാൽ യുഗമ ശൂന്യമാണെങ്കിൽ സ്ഥിരസ്ഥിതി ഡാറ്റാബേസ് \"{database}\" ഉപയോഗിക്കുന്നു",
@@ -1423,6 +1453,7 @@
     "filterQuery": "പ്രവൃത്തി നിർത്തലാക്കൽ",
     "selectField": "ഫീൽഡ് തിരഞ്ഞെടുക്കുക",
     "precision": "കാരണശുദ്ധി",
+    "decimal0": "1",
     "decimal1": "1.0",
     "decimal2": "1.00",
     "decimal3": "1.000",
@@ -1443,6 +1474,10 @@
     "lockViewDescription": "Explain why you’re locking this view. This message will be shown when anyone tries to unlock this view (optional)."
   },
   "msg": {
+    "deleteAccountPermanently": "Delete your account permanently",
+    "learnMore": "Learn more",
+    "connectIntegrations": "Connect integrations with NocoDB.",
+    "manageConnections": "Manage connections for your integrations.",
     "invalidConfiguration": "അസാധുവായ ബട്ടൺ ക്രമീകരണം",
     "invalidColumnConfiguration": "അസാധുവായ ഫീൽഡ് ക്രമീകരണം",
     "invalidTheme": "ഒരു സാധുവായ തീം തിരഞ്ഞെടുക്കുക",
@@ -1586,6 +1621,10 @@
       }
     },
     "info": {
+      "inviteSent": "Invitation sent successfully",
+      "userRoleUpdated": "User role updated successfully",
+      "actionIrreversible": "This action is irreversible",
+      "deleteAccount": "Deleting your account will permanently remove any Workspaces and Bases where you are the sole owner. For all other cases, your access permissions will be revoked.",
       "calendarReadOnly": "ഗണിതീയമോ സിസ്റ്റം ഫീല്‍ഡുകള്‍ ഉപയോഗിക്കുമ്പോള്‍ വിശകലന ദിവസങ്ങള്‍ തമ്മില്‍ റെക്കോര്‍ഡുകള്‍ വലിച്ചിടാന്‍ സാധിക്കുകയില്ല.",
       "schemaReadOnly": "ഈ സ്രോത്തസ്സിനായുള്ള സ്ക്കീമ അഭിജാതം മാറ്റങ്ങള്‍ നിര്‍ത്തിവയ്ക്കുന്നുണ്ട്",
       "enterWorkspaceName": "വർക്ക്സ്പേസ് പേര് നൽകുക",
@@ -1768,7 +1807,8 @@
       "thisFeatureIsOnlyAvailableInEnterpriseEdition": "ഈ സവിശേഷത എന്റർപ്രൈസ് എഡിഷനിൽ മാത്രമെ ലഭ്യമാവുകയുള്ളു",
       "yourCurrentRoleIs": "താങ്കളുടെ നിലവിലെ പങ്ക്",
       "pleaseRequestAccessForView": "ബഹുദയാളിത്വത്തിനുള്ള അനുമതി നേടാൻ അഡ്മിന്നിൽ നിന്ന് / അടിസ്ഥാന ഉടമയിൽ നിന്ന് / വർക്ക്‌സ്പെയ്സ് ഉടമയിൽ നിന്ന് ആവശ്യം ചെയ്യുക {viewName}",
-      "preventHideAllOptions": "ഫീൽഡ് ആവശ്യമാണ് എങ്കിൽ എല്ലാ ഓപ്ഷനുകളും ഒളിപ്പിക്കാൻ കഴിയില്ല"
+      "preventHideAllOptions": "ഫീൽഡ് ആവശ്യമാണ് എങ്കിൽ എല്ലാ ഓപ്ഷനുകളും ഒളിപ്പിക്കാൻ കഴിയില്ല",
+      "valueMustBeAtMostCharLong": "Value must be at most {length} characters long"
     },
     "error": {
       "manualTriggerHook": "മാനുവൽ ഹുക്കുകൾ അപ്രാപ്തമാക്കാനാവില്ല",
@@ -1869,7 +1909,10 @@
       "somethingWentWrong": "എന്തോ ഒരു പിശക് സംഭവിച്ചു",
       "draggedContentIsNotTypeOfImage": "വലിച്ചിടൽ ഉള്ളടക്കം ചിത്രമല്ലാത്ത തരത്തിൽ ഉണ്ട്",
       "fieldToParseImageData": "ചിത്ര ഡാറ്റ പാഴ്സ് ചെയ്യാൻ ഫീൽഡ് ആവശ്യമാണ്",
-      "someOfTheRequiredFieldsAreEmpty": "ആവശ്യമായ ചില കളങ്ങൾ ശൂന്യമാണ്"
+      "someOfTheRequiredFieldsAreEmpty": "ആവശ്യമായ ചില കളങ്ങൾ ശൂന്യമാണ്",
+      "columnVisibilityUpdateFailed": "Failed to update field visibility",
+      "unsupportedCharacter": "Unsupported character: {char}",
+      "unsupportedCharacters": "Unsupported characters: {char}"
     },
     "toast": {
       "exportMetadata": "അടിസ്ഥാന ഡാറ്റയുടെ മീറ്റാ വിവരങ്ങൾ വിജയകരമായി കയറ്റുമതി ചെയ്തു",
@@ -1929,6 +1972,11 @@
       "roleUpdated": "പങ്കാളിത്തം വിജയകരമായി പുതുക്കി",
       "connectionAdded": "സംയോജനം വിജയകരമായി ബന്ധിപ്പിച്ചു",
       "connectionAddedDesc": "ബേസ് ഉടമകൾക്കും സൃഷ്ടാക്കൾക്കും ഇനി ക്രെഡൻഷ്യലുകൾ വീണ്ടും പയോഗിക്കാതെ ഡാറ്റാ സ്രോതസ്സുകൾ ചേർക്കാം."
+    },
+    "subText": {
+      "createNewTable": "Start from scratch.",
+      "importData": "From files & external sources.",
+      "connectExternalData": "In realtime to external databases."
     }
   }
 }

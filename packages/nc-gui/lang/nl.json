@@ -93,6 +93,7 @@
     "none": "Geen"
   },
   "general": {
+    "usage": "Usage",
     "snapshot": "Snapshot",
     "snapshots": "Snapshots",
     "baseSnapshots": "Base Snapshots",
@@ -140,6 +141,7 @@
     "clear": "Wissen",
     "slack": "Slack",
     "comment": "Opmerking",
+    "comments": "Comments",
     "microsoftTeams": "Microsoft Teams",
     "discord": "Discord",
     "matterMost": "Mattermost",
@@ -171,6 +173,7 @@
     "updating": "Bijwerken",
     "rename": "Hernoemen",
     "renameEntity": "Hernoem {entity}",
+    "untitledEntity": "Untitled {entity}",
     "reload": "Herladen",
     "refresh": "Vernieuwen",
     "reset": "Resetten",
@@ -301,7 +304,9 @@
     "enable": "Inschakelen",
     "poweredBy": "Powered by",
     "nocoAI": "Noco AI",
-    "you": "You"
+    "you": "You",
+    "read": "Read",
+    "unread": "Unread"
   },
   "objects": {
     "files": "bestanden",
@@ -313,6 +318,8 @@
     "year": "Jaar",
     "workspace": "Werkruimte",
     "workspaces": "Werkruimtes",
+    "document": "Document",
+    "documents": "Documents",
     "project": "Project",
     "projects": "Projecten",
     "table": "Tabel",
@@ -530,6 +537,7 @@
     "displayValue": "Weergavewaarde",
     "expand": "Uitklappen",
     "hideAll": "Verberg alles",
+    "systemFields": "System fields",
     "hideSystemFields": "Systeemvelden verbergen",
     "removeFile": "Verwijder bestand",
     "hasMany": "Heeft Veel",
@@ -575,6 +583,7 @@
     "uiACL": "Toegangscontrole voor UI",
     "metaOperations": "Metadata Operaties",
     "audit": "Controle",
+    "audits": "Audits",
     "auditLogs": "Audit Logs",
     "sqlMigrations": "SQL-Migraties",
     "dbCredentials": "Database-inloggegevens",
@@ -635,6 +644,9 @@
     "categories": "Categorieën",
     "fieldInaccessible": "Veld niet toegankelijk",
     "noConditionsAdded": "Geen voorwaarden toegevoegd",
+    "thisUrlIsAvailable": "This URL is available",
+    "thisUrlIsUnavailable": "This URL is unavailable",
+    "checkingUrlAvailability": "Checking URL availability",
     "noAiIntegrationAvailable": "No AI Integrations available.",
     "nocoAiBaseBuilder": "Noco AI Base Builder",
     "additionalDetails": "Aanvullende details",
@@ -650,9 +662,18 @@
     "thisFormIsLocked": "Dit formulier is momenteel vergrendeld",
     "unlockThisVieToMakeChanges": "Ontgrendel deze weergave om wijzigingen aan te brengen",
     "yourBaseRole": "Your base role",
-    "lockedByUser": "Geblokkeerd door {user}"
+    "lockedByUser": "Geblokkeerd door {user}",
+    "thisPageDoesNotExist": "This page doesn’t exist",
+    "customUrl": "Custom URL"
   },
   "labels": {
+    "noImage": "No Image",
+    "quickNavigation": "Quick Navigation",
+    "recent": "Recent",
+    "limitRecordSelectionToView": "Limit record selection to a view",
+    "limitRecordSelectionToFilters": "Limit record selection to filters",
+    "addedBy": "Added by",
+    "whatsNew": "What's New!",
     "enableSnowFall": "Enable Snowfall",
     "disableSnowFall": "Disable Snowfall",
     "snapshotCreationFailed": "Snapshot creation failed",
@@ -698,7 +719,7 @@
     "addNewLookupHelperText1": "Opzoekvelden tonen gegevens uit gekoppelde records. Selecteer specifieke velden van ",
     "addNewLookupHelperText2": " tabel om deze als Opzoekvelden toe te voegen in deze tabel.",
     "formatting": "Opmaak",
-    "selectAFormatType": "- -Selecteer een opmaaktype (optioneel)- -",
+    "selectAFormatType": "- -Select a format type (optional)- -",
     "formatType": "Opmaaktype",
     "toUpload": "te uploaden",
     "dragFilesHere": "sleep bestanden hierheen",
@@ -755,7 +776,7 @@
     "deleteUserAndData": "Verwijder Gebruiker en hun gegevens",
     "userOptions": "Gebruikersopties",
     "deleteThisOrganization": "Verwijder deze Organisatie",
-    "dangerZone": "Gevaarzone",
+    "dangerZone": "Danger Zone",
     "childView": "Kinderweergave",
     "selectYear": "Selecteer Jaar",
     "save": "Opslaan",
@@ -1070,6 +1091,14 @@
     "viewHide": "View visibility "
   },
   "activity": {
+    "clickToResolve": "Click to resolve",
+    "resolvedBy": "Resolved by",
+    "leaveWorkspace": "Leave workspace",
+    "removeUser": "Remove user",
+    "filterByThisField": "Filter by this field",
+    "groupByThisField": "Group by this field",
+    "addToStarred": "Add to starred",
+    "removeFromStarred": "Remove from starred",
     "deleteAllRecords": "Delete all records",
     "assignView": "Weergave toewijzen",
     "webhookDetails": "Webhookdetails",
@@ -1336,6 +1365,7 @@
     "pending": "Pending"
   },
   "tooltip": {
+    "leaveWorkspace": "Each workspace must have at least one owner. Please assign another user as the Owner before leaving the workspace. If you are the last member, consider deleting the workspace instead.",
     "currentDateNotAvail": "Current date option not available for this data source / data type",
     "privateConnection": "Inschakelen om deze verbinding privé te maken en verborgen voor andere makers in deze werkruimte.",
     "optionalDatabaseName": "Optioneel. Gebruikt standaarddatabase \"{database}\" als deze leeg blijft",
@@ -1423,6 +1453,7 @@
     "filterQuery": "Filtervraag",
     "selectField": "Selecteer veld",
     "precision": "Precisie",
+    "decimal0": "1",
     "decimal1": "1.0",
     "decimal2": "1.00",
     "decimal3": "1.000",
@@ -1443,6 +1474,10 @@
     "lockViewDescription": "Explain why you’re locking this view. This message will be shown when anyone tries to unlock this view (optional)."
   },
   "msg": {
+    "deleteAccountPermanently": "Delete your account permanently",
+    "learnMore": "Learn more",
+    "connectIntegrations": "Connect integrations with NocoDB.",
+    "manageConnections": "Manage connections for your integrations.",
     "invalidConfiguration": "Ongeldige knopconfiguratie",
     "invalidColumnConfiguration": "Ongeldige veldconfiguratie",
     "invalidTheme": "Selecteer een geldig thema",
@@ -1586,6 +1621,10 @@
       }
     },
     "info": {
+      "inviteSent": "Invitation sent successfully",
+      "userRoleUpdated": "User role updated successfully",
+      "actionIrreversible": "This action is irreversible",
+      "deleteAccount": "Deleting your account will permanently remove any Workspaces and Bases where you are the sole owner. For all other cases, your access permissions will be revoked.",
       "calendarReadOnly": "Je zult geen records tussen data kunnen slepen wanneer berekende of systeemvelden worden gebruikt.",
       "schemaReadOnly": "Schema-aanpassingen zijn uitgeschakeld voor deze bron",
       "enterWorkspaceName": "Voer werkruimtenaam in",
@@ -1768,7 +1807,8 @@
       "thisFeatureIsOnlyAvailableInEnterpriseEdition": "Deze functie is alleen beschikbaar in enterprise editie",
       "yourCurrentRoleIs": "Uw huidige rol is",
       "pleaseRequestAccessForView": "Vraag om hogere rechten van de Admin / Base eigenaar / Werkruimte eigenaar om toegang te krijgen tot deze {viewName}",
-      "preventHideAllOptions": "U kunt niet alle opties verbergen als een veld verplicht is"
+      "preventHideAllOptions": "U kunt niet alle opties verbergen als een veld verplicht is",
+      "valueMustBeAtMostCharLong": "Value must be at most {length} characters long"
     },
     "error": {
       "manualTriggerHook": "Handmatige hooks kunnen niet worden uitgeschakeld",
@@ -1869,7 +1909,10 @@
       "somethingWentWrong": "Er is iets fout gegaan",
       "draggedContentIsNotTypeOfImage": "Gesleepte inhoud is niet van het type afbeelding",
       "fieldToParseImageData": "Veld om afbeeldingsgegevens te parseren",
-      "someOfTheRequiredFieldsAreEmpty": "Enkele verplichte velden zijn leeg"
+      "someOfTheRequiredFieldsAreEmpty": "Enkele verplichte velden zijn leeg",
+      "columnVisibilityUpdateFailed": "Failed to update field visibility",
+      "unsupportedCharacter": "Unsupported character: {char}",
+      "unsupportedCharacters": "Unsupported characters: {char}"
     },
     "toast": {
       "exportMetadata": "Project metadata met succes geëxporteerd",
@@ -1929,6 +1972,11 @@
       "roleUpdated": "Rol succesvol bijgewerkt",
       "connectionAdded": "Integratie succesvol verbonden",
       "connectionAddedDesc": "Basis eigenaren en makers kunnen nu een gegevensbron toevoegen zonder inloggegevens opnieuw in te voeren."
+    },
+    "subText": {
+      "createNewTable": "Start from scratch.",
+      "importData": "From files & external sources.",
+      "connectExternalData": "In realtime to external databases."
     }
   }
 }
