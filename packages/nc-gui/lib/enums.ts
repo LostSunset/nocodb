@@ -14,7 +14,7 @@ export enum Language {
   fa = 'فارسی',
   fi = 'Suomalainen',
   fr = 'Français',
-  he = 'עִברִית',
+  he = 'עברית',
   hi = 'हिन्दी',
   hr = 'Hrvatski',
   hu = 'Magyar',
@@ -181,7 +181,7 @@ export enum IntegrationStoreEvents {
   INTEGRATION_ADD = 'integration-add',
 }
 
-export enum IconType {
+export enum WorkspaceIconType {
   IMAGE = 'IMAGE',
   EMOJI = 'EMOJI',
   ICON = 'ICON',

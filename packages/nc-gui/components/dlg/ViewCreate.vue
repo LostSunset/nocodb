@@ -76,6 +76,8 @@ type AiSuggestedViewType = SerializedAiViewType & {
   tab?: AiWizardTabsType
 }
 
+const { $e } = useNuxtApp()
+
 const { metas, getMeta } = useMetas()
 
 const workspaceStore = useWorkspace()
@@ -199,6 +201,10 @@ const activeAiTab = computed({
         aiPromptInputRef.value?.focus()
       })
     }
+
+    if (aiMode.value) {
+      $e(`c:view:ai:tab-change:${value}`)
+    }
   },
 })
 
@@ -226,6 +232,8 @@ watch(
 const onAiEnter = async () => {
   calledFunction.value = 'createViews'
 
+  $e('a:view:ai:create')
+
   if (activeTabSelectedViews.value.length) {
     try {
       const data = await createViews(activeTabSelectedViews.value, baseId.value)
@@ -239,6 +247,22 @@ const onAiEnter = async () => {
 
     vModel.value = false
   }
+}
+
+const getDefaultViewMetas = (viewType: ViewTypes) => {
+  switch (viewType) {
+    case ViewTypes.FORM:
+      return {
+        submit_another_form: false,
+        show_blank_form: false,
+        meta: {
+          hide_branding: false,
+          background_color: '#F9F9FA',
+          hide_banner: false,
+        },
+      }
+  }
+  return {}
 }
 
 async function onSubmit() {
@@ -274,7 +298,10 @@ async function onSubmit() {
           data = await api.dbView.galleryCreate(tableId.value, form)
           break
         case ViewTypes.FORM:
-          data = await api.dbView.formCreate(tableId.value, form)
+          data = await api.dbView.formCreate(tableId.value, {
+            ...form,
+            ...getDefaultViewMetas(ViewTypes.FORM),
+          })
           break
         case ViewTypes.KANBAN:
           data = await api.dbView.kanbanCreate(tableId.value, form)
@@ -652,8 +679,12 @@ const onSelectAll = () => {
   })
 }
 
-const toggleAiMode = async () => {
+const toggleAiMode = async (from = false) => {
   if (aiMode.value) return
+
+  if (from) {
+    $e('c:view:ai:toggle:true')
+  }
 
   formValidator.value?.clearValidate()
   aiError.value = ''
@@ -673,6 +704,8 @@ const toggleAiMode = async () => {
 
 const disableAiMode = () => {
   if (isAIViewCreateMode.value) return
+
+  $e('c:view:ai:toggle:false')
 
   aiMode.value = false
   aiModeStep.value = null
@@ -702,7 +735,7 @@ const fullAuto = async (e) => {
   }
 
   if (!aiModeStep.value) {
-    await toggleAiMode()
+    await toggleAiMode(true)
   } else if (aiModeStep.value === AiStep.pick && activeTabSelectedViews.value.length === 0) {
     await onSelectAll()
   } else if (aiModeStep.value === AiStep.pick && activeTabSelectedViews.value.length > 0) {
@@ -872,7 +905,7 @@ const getPluralName = (name: string) => {
               '!pointer-events-none !cursor-not-allowed': aiLoading,
               '!bg-nc-bg-purple-dark hover:!bg-gray-100': aiMode,
             }"
-            @click.stop="aiMode ? disableAiMode() : toggleAiMode()"
+            @click.stop="aiMode ? disableAiMode() : toggleAiMode(true)"
           >
             <div class="flex items-center justify-center">
               <GeneralIcon icon="ncAutoAwesome" />
@@ -1238,6 +1271,7 @@ const getPluralName = (name: string) => {
                       placement="top"
                     >
                       <NcButton
+                        v-e="['a:view:ai:predict-more']"
                         size="xs"
                         class="!px-1"
                         type="text"
@@ -1254,6 +1288,7 @@ const getPluralName = (name: string) => {
                     </NcTooltip>
                     <NcTooltip title="Clear all and Re-suggest" placement="top">
                       <NcButton
+                        v-e="['a:view:ai:predict-refresh']"
                         size="xs"
                         class="!px-1"
                         type="text"
@@ -1305,7 +1340,12 @@ const getPluralName = (name: string) => {
                     "
                     :loading="isPredictFromPromptLoading"
                     icon-only
-                    @click="predictFromPrompt"
+                    @click="
+                      () => {
+                        $e('a:view:ai:predict-from-prompt', { prompt })
+                        predictFromPrompt()
+                      }
+                    "
                   >
                     <template #loadingIcon>
                       <GeneralLoader class="!text-purple-700" size="medium" />
@@ -1450,7 +1490,6 @@ const getPluralName = (name: string) => {
           </NcButton>
           <NcButton
             v-else-if="aiIntegrationAvailable"
-            v-e="[form.copy_from_id ? 'a:view:duplicate' : 'a:view:create']"
             type="primary"
             size="small"
             theme="ai"
