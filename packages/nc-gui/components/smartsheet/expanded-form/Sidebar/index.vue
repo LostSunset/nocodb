@@ -1,17 +1,18 @@
 <script setup lang="ts">
 const props = defineProps<{
-  store: ReturnType<typeof useProvideExpandedFormStore>
   showFieldsTab?: boolean
 }>()
+
+const expandedFormStore = useExpandedFormStoreOrThrow();
 
 const { isFeatureEnabled } = useBetaFeatureToggle()
 const isAuditsEnabled = computed(() => !isEeUI || isFeatureEnabled(FEATURE_FLAG.EXPANDED_FORM_RECORD_AUDITS))
 
 const tab = ref<'fields' | 'comments' | 'audits'>(props.showFieldsTab ? 'fields' : 'comments')
 
-watch(tab, newValue => {
+watch(tab, (newValue) => {
   if (newValue === 'audits') {
-    props.store.loadAudits()
+    expandedFormStore.loadAudits()
   }
 })
 </script>
@@ -26,7 +27,7 @@ watch(tab, newValue => {
             <span class="<lg:hidden"> {{ $t('objects.fields') }} </span>
           </div>
         </template>
-        <SmartsheetExpandedFormPresentorsFieldsMiniColumnsWrapper :store="props.store" />
+        <SmartsheetExpandedFormPresentorsFieldsMiniColumnsWrapper />
       </a-tab-pane>
 
       <a-tab-pane key="comments" class="w-full h-full">

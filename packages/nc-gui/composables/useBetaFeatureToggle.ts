@@ -9,9 +9,23 @@ const FEATURES = [
     enabled: true,
   },
   {
+    id: 'link_to_another_record',
+    title: 'Link To Another Record',
+    description: 'Enable LTAR for links',
+    enabled: false,
+  },
+  {
     id: 'ai_features',
     title: 'AI features',
     description: 'Unlock AI features to enhance your NocoDB experience.',
+    enabled: false,
+    isEngineering: true,
+    isEE: true,
+  },
+  {
+    id: 'nocodb_scripts',
+    title: 'NocoDB Scripts (Beta)',
+    description: 'Enable NocoDB Scripts to automate repetetive workflow',
     enabled: false,
     isEngineering: true,
     isEE: true,
@@ -22,6 +36,14 @@ const FEATURES = [
     description: 'Enable dynamic integrations.',
     enabled: false,
     isEngineering: true,
+  },
+  {
+    id: 'data_reflection',
+    title: 'Data reflection',
+    description: 'Enable data reflection.',
+    enabled: false,
+    isEngineering: true,
+    isEE: true,
   },
   {
     id: 'geodata_column',
