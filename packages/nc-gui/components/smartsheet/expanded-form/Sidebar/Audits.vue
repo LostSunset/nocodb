@@ -3,7 +3,8 @@ import { type AuditType } from 'nocodb-sdk'
 
 const { user } = useGlobal()
 
-const { primaryKey, consolidatedAudits, isAuditLoading, loadMoreAudits, resetAuditPages, mightHaveMoreAudits } = useExpandedFormStoreOrThrow()
+const { primaryKey, consolidatedAudits, isAuditLoading, loadMoreAudits, resetAuditPages, mightHaveMoreAudits } =
+  useExpandedFormStoreOrThrow()
 
 const auditsWrapperEl = ref<HTMLElement | null>(null)
 
@@ -34,7 +35,7 @@ const createdByAudit = (
   }
 }
 
-const shouldSkipAuditsScroll = ref(false);
+const shouldSkipAuditsScroll = ref(false)
 
 function initLoadMoreAudits() {
   shouldSkipAuditsScroll.value = true
@@ -98,9 +99,7 @@ function isV0Audit(audit: AuditType) {
       <template v-else>
         <div class="mt-auto" />
         <div v-if="mightHaveMoreAudits" class="p-3 text-center">
-          <NcButton size="small" type="secondary" @click="initLoadMoreAudits()">
-            Load earlier
-          </NcButton>
+          <NcButton size="small" type="secondary" @click="initLoadMoreAudits()"> Load earlier </NcButton>
         </div>
         <div v-for="audit of consolidatedAudits" :key="audit.id" :class="`${audit.id}`" class="nc-audit-item">
           <div class="group gap-3 overflow-hidden px-3 py-2 transition hover:bg-gray-100">
@@ -110,6 +109,7 @@ function isV0Audit(audit: AuditType) {
                   :user="{
                     email: audit?.created_by_email || audit?.user,
                     display_name: audit?.created_display_name || audit?.user,
+                    meta: audit?.created_by_meta,
                   }"
                   class="mt-0.5"
                   size="medium"
@@ -204,13 +204,13 @@ function isV0Audit(audit: AuditType) {
   .audit-link-addition {
     @apply flex gap-2 flex-wrap;
     span {
-      @apply !text-sm px-1 py-0.5 text-green-700 font-weight-500 border-1 border-green-200 rounded-md bg-green-50 decoration-clone;
+      @apply !text-[13px] px-1 py-0.5 text-green-700 font-weight-500 border-1 border-green-200 rounded-md bg-green-50 decoration-clone;
     }
   }
   .audit-link-removal {
     @apply flex gap-2 flex-wrap;
     span {
-      @apply !text-sm px-1 py-0.5 text-red-700 font-weight-500 border-1 border-red-200 rounded-md bg-red-50 decoration-clone line-through;
+      @apply !text-[13px] px-1 py-0.5 text-red-700 font-weight-500 border-1 border-red-200 rounded-md bg-red-50 decoration-clone line-through;
     }
   }
 }
