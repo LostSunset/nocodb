@@ -2406,17 +2406,12 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
         (c) => c.id === colId,
       );
 
-      const chilCol = await (
-        (await relColumn.getColOptions(
-          this.context,
-        )) as LinkToAnotherRecordColumn
-      ).getChildColumn(this.context);
+      const relationColOpts = (await relColumn.getColOptions(
+        this.context,
+      )) as LinkToAnotherRecordColumn;
+      const chilCol = await relationColOpts.getChildColumn(this.context);
       const childTable = await chilCol.getModel(this.context);
-      const parentCol = await (
-        (await relColumn.getColOptions(
-          this.context,
-        )) as LinkToAnotherRecordColumn
-      ).getParentColumn(this.context);
+      const parentCol = await relationColOpts.getParentColumn(this.context);
       const parentTable = await parentCol.getModel(this.context);
       const childModel = await Model.getBaseModelSQL(this.context, {
         model: childTable,
@@ -2433,8 +2428,16 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
         extractPkAndPv: true,
         fieldsSet: args.fieldsSet,
       });
-      await this.applySortAndFilter({ table: childTable, where, qb, sort });
-
+      const view = relationColOpts.fk_target_view_id
+        ? await View.get(this.context, relationColOpts.fk_target_view_id)
+        : await View.getDefaultView(this.context, childModel.model.id);
+      await this.applySortAndFilter({
+        table: childTable,
+        where,
+        qb,
+        sort,
+        view,
+      });
       const childQb = this.dbDriver.queryBuilder().from(
         this.dbDriver
           .unionAll(
@@ -2571,6 +2574,14 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
       onlySort: true,
     });
 
+    if (!sort || sort === '') {
+      const view = relColOptions.fk_target_view_id
+        ? await View.get(this.context, relColOptions.fk_target_view_id)
+        : await View.getDefaultView(this.context, childTable.id);
+      const childSorts = await view.getSorts(this.context);
+      await sortV2(childModel, childSorts, qb);
+    }
+
     // todo: sanitize
     if (!selectAllRecords) {
       // get one extra record to check if there are more records in case of v3 api and nested
@@ -2667,18 +2678,12 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
       const relColumn = (await this.model.getColumns(this.context)).find(
         (c) => c.id === colId,
       );
-
-      const chilCol = await (
-        (await relColumn.getColOptions(
-          this.context,
-        )) as LinkToAnotherRecordColumn
-      ).getChildColumn(this.context);
+      const relationColOpts = (await relColumn.getColOptions(
+        this.context,
+      )) as LinkToAnotherRecordColumn;
+      const chilCol = await relationColOpts.getChildColumn(this.context);
       const childTable = await chilCol.getModel(this.context);
-      const parentCol = await (
-        (await relColumn.getColOptions(
-          this.context,
-        )) as LinkToAnotherRecordColumn
-      ).getParentColumn(this.context);
+      const parentCol = await relationColOpts.getParentColumn(this.context);
       const parentTable = await parentCol.getModel(this.context);
       const childBaseModel = await Model.getBaseModelSQL(this.context, {
         model: childTable,
@@ -2863,11 +2868,15 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
 
     await childModel.selectObject({ qb, fieldsSet: args.fieldsSet });
 
+    const view = relColOptions.fk_target_view_id
+      ? await View.get(this.context, relColOptions.fk_target_view_id)
+      : await View.getDefaultView(this.context, childTable.id);
     await this.applySortAndFilter({
       table: childTable,
       where,
       qb,
       sort,
+      view,
     });
 
     const finalQb = this.dbDriver.unionAll(
@@ -2888,11 +2897,11 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
             (apiVersion === NcApiVersion.V3 && nested ? 1 : 0),
         );
         query.offset(+rest?.offset || 0);
-
         return this.isSqlite ? this.dbDriver.select().from(query) : query;
       }),
       !this.isSqlite,
     );
+    console.log(finalQb.toQuery());
 
     const children = await this.execAndParse(
       finalQb,
@@ -5990,6 +5999,12 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
           );
         }
 
+        if (!allowSystemColumn && col.readonly) {
+          NcError.badRequest(
+            `Column "${col.title}" is readonly column and cannot be updated`,
+          );
+        }
+
         if (
           col.system &&
           !allowSystemColumn &&
@@ -6332,12 +6347,14 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
       raw = false,
       throwExceptionIfNotExist = false,
       isSingleRecordUpdation = false,
+      allowSystemColumn = false,
       apiVersion,
     }: {
       cookie?: any;
       raw?: boolean;
       throwExceptionIfNotExist?: boolean;
       isSingleRecordUpdation?: boolean;
+      allowSystemColumn?: boolean;
       apiVersion?: NcApiVersion;
     } = {},
   ) {
@@ -6348,7 +6365,7 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
       // validate update data
       if (!raw) {
         for (const d of datas) {
-          await this.validate(d, columns);
+          await this.validate(d, columns, { allowSystemColumn });
         }
       }
 
@@ -6790,6 +6807,8 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
         }
       }
 
+      await this.beforeBulkDelete(deleted, this.dbDriver, cookie);
+
       const execQueries: ((
         trx: Knex.Transaction,
         ids: any[],
@@ -7135,10 +7154,18 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
   }
 
   public async beforeInsert(data: any, _trx: any, req): Promise<void> {
+    if (this.model.synced) {
+      NcError.badRequest('Cannot insert into synced table');
+    }
+
     await this.handleHooks('before.insert', null, data, req);
   }
 
   public async beforeBulkInsert(data: any, _trx: any, req): Promise<void> {
+    if (this.model.synced) {
+      NcError.badRequest('Cannot insert into synced table');
+    }
+
     await this.handleHooks('before.bulkInsert', null, data, req);
   }
 
@@ -7562,7 +7589,17 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
   }
 
   public async beforeDelete(data: any, _trx: any, req): Promise<void> {
+    if (this.model.synced) {
+      NcError.badRequest('Cannot delete from synced table');
+    }
+
     await this.handleHooks('before.delete', null, data, req);
+  }
+
+  public async beforeBulkDelete(_data: any, _trx: any, _req): Promise<void> {
+    if (this.model.synced) {
+      NcError.badRequest('Cannot delete from synced table');
+    }
   }
 
   protected async handleHooks(hookName, prevData, newData, req): Promise<void> {
@@ -7615,8 +7652,12 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
   async validate(
     data: Record<string, any>,
     columns?: Column[],
-    { typecast }: { typecast?: boolean } = {
+    {
+      typecast,
+      allowSystemColumn,
+    }: { typecast?: boolean; allowSystemColumn?: boolean } = {
       typecast: false,
+      allowSystemColumn: false,
     },
   ): Promise<boolean> {
     const cols = columns || (await this.model.getColumns(this.context));
@@ -7635,11 +7676,18 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
         }
 
         if (
+          !allowSystemColumn &&
           column.system &&
           ![UITypes.ForeignKey, UITypes.Order].includes(column.uidt)
         ) {
           NcError.badRequest(
             `Column "${column.title}" is system column and cannot be updated`,
+          );
+        }
+
+        if (!allowSystemColumn && column.readonly) {
+          NcError.badRequest(
+            `Column "${column.title}" is readonly column and cannot be updated`,
           );
         }
       }
@@ -10384,12 +10432,6 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
                 if (attachment.url.startsWith('data:')) {
                   NcError.unprocessableEntity(
                     `Attachment urls do not support data urls`,
-                  );
-                }
-
-                if (!/^https?:\/\//i.test(attachment.url)) {
-                  NcError.unprocessableEntity(
-                    `Attachment url '${attachment.url}' is not a valid url`,
                   );
                 }
 

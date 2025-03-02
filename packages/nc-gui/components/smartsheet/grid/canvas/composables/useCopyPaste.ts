@@ -126,7 +126,7 @@ export function useCopyPaste({
     }
 
     // skip pasting virtual columns (including LTAR columns for now) and system columns
-    if (isVirtualCol(col) || isSystemColumn(col)) {
+    if (isVirtualCol(col) || isSystemColumn(col) || col?.readonly) {
       if (showInfo) {
         message.info(t('msg.info.pasteNotSupported'))
       }
@@ -158,7 +158,16 @@ export function useCopyPaste({
     }
     if (!meta.value?.id) return
 
-    if (isDrawerOrModalExist() || isExpandedCellInputExist() || isLinkDropdownExist()) {
+    if (
+      isDrawerOrModalExist() ||
+      isExpandedCellInputExist() ||
+      isLinkDropdownExist() ||
+      isViewSearchActive() ||
+      isSidebarNodeRenameActive() ||
+      isActiveElementInsideExtension() ||
+      isCmdJActive() ||
+      cmdKActive()
+    ) {
       return
     }
     if (isNcDropdownOpen()) return
@@ -763,6 +772,7 @@ export function useCopyPaste({
       isDataReadOnly.value ||
       !ctx ||
       !hasEditPermission.value ||
+      columnObj.readonly ||
       isSystemColumn(columnObj) ||
       (!isLinksOrLTAR(columnObj) && isVirtualCol(columnObj))
     )

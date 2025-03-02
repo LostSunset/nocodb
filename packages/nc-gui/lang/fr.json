@@ -675,7 +675,8 @@
     "yourBaseRole": "Votre rôle de base",
     "lockedByUser": "Verrouillé par {user}",
     "thisPageDoesNotExist": "Cette page n'existe pas",
-    "customUrl": "URL personnalisée"
+    "customUrl": "URL personnalisée",
+    "viewSettingsCantBeChangedWhenViewIs": "Les paramètres de la vue ne peuvent pas être modifiés lorsque la vue est {type}"
   },
   "labels": {
     "latitude": "Latitude",
@@ -1125,7 +1126,8 @@
     "osBrowser": "OS, Navigateur",
     "rowId": "Id de ligne",
     "showJsonPayload": "Afficher la payload du JSON",
-    "autoCreateMissingSelectionOptions": "Créer automatiquement les options de champ de sélection manquantes"
+    "autoCreateMissingSelectionOptions": "Créer automatiquement les options de champ de sélection manquantes",
+    "fillForm": "Fill Form"
   },
   "activity": {
     "clickToResolve": "Cliquer pour résoudre",

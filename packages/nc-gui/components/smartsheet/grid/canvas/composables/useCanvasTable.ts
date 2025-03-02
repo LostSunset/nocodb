@@ -178,7 +178,9 @@ export function useCanvasTable({
     () => !selectedRows.value.length && isOrderColumnExists.value && !isRowReorderDisabled.value && !vSelectedAllRecords.value,
   )
 
-  const isAddingEmptyRowAllowed = computed(() => isDataEditAllowed.value && !isSqlView.value && !isPublicView.value)
+  const isAddingEmptyRowAllowed = computed(
+    () => isDataEditAllowed.value && !isSqlView.value && !isPublicView.value && !meta.value?.synced,
+  )
 
   const isAddingColumnAllowed = computed(() => !readOnly.value && !isLocked.value && isFieldEditAllowed.value && !isSqlView.value)
 
@@ -194,7 +196,6 @@ export function useCanvasTable({
 
   const columns = computed<CanvasGridColumn[]>(() => {
     const fetchMetaIdsLocal: string[] = []
-
     const cols = fields.value
       .map((f) => {
         if (!f.id) return false
@@ -265,7 +266,7 @@ export function useCanvasTable({
         }
       })
       .filter((c) => !!c)
-      .sort((c) => (c?.fixed ? -1 : 1))
+      .sort((a, b) => !!b.fixed - !!a.fixed)
 
     fetchMetaIds.value.push(...fetchMetaIdsLocal)
 
@@ -614,10 +615,12 @@ export function useCanvasTable({
       const rowObj = cachedRows.value.get(ctx.row)
       const columnObj = ctx.column !== undefined ? fields.value[ctx.column - 1] : null
       if (!rowObj || !columnObj) {
+        triggerRefreshCanvas()
         return
       }
 
       if (!ctx.updatedColumnTitle && isVirtualCol(columnObj)) {
+        triggerRefreshCanvas()
         return
       }
 
@@ -635,10 +638,12 @@ export function useCanvasTable({
           },
         }
         cachedRows.value.set(ctx.row, updatedRow)
+        triggerRefreshCanvas()
       }
 
       // update/save cell value
       await updateOrSaveRow?.(rowObj, ctx.updatedColumnTitle || columnObj.title)
+      triggerRefreshCanvas()
     },
     bulkUpdateRows,
     bulkUpsertRows,
@@ -852,6 +857,8 @@ export function useCanvasTable({
         // skip readonly columns
         if (isReadonly(colObj)) continue
 
+        if (colObj.readonly) continue
+
         row.row[colObj.title] = null
         props.push(colObj.title)
       }
@@ -973,6 +980,11 @@ export function useCanvasTable({
       return null
     }
 
+    if (column.readonly) {
+      message.info(t('msg.info.fieldReadonly'))
+      return null
+    }
+
     makeEditable(row, clickedColumn)
   }
 
@@ -995,7 +1007,7 @@ export function useCanvasTable({
     async () => {
       if (!fetchMetaIds.value.length) return
 
-      await Promise.all(fetchMetaIds.value.map(async (id) => getMeta(id)))
+      await Promise.all(fetchMetaIds.value.map(async (id) => getMeta(id, false, false, undefined, true)))
       fetchMetaIds.value = []
       triggerRefreshCanvas()
     },

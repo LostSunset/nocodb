@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   AppEvents,
   extractRolesObj,
+  OrderedProjectRoles,
   OrgUserRoles,
   PluginCategory,
   ProjectRoles,
@@ -120,13 +121,6 @@ export class BaseUsersService {
           user.id,
           ncMeta,
         );
-
-        const base = await Base.get(context, param.baseId, ncMeta);
-
-        if (!base) {
-          return NcError.baseNotFound(param.baseId);
-        }
-
         // if already exists and has a role then throw error
         if (baseUser?.is_mapped && baseUser?.roles) {
           NcError.badRequest(
@@ -150,6 +144,17 @@ export class BaseUsersService {
               fk_user_id: user.id,
               roles: param.baseUser.roles || 'editor',
               invited_by: param.req?.user?.id,
+            },
+            ncMeta,
+          );
+
+          await this.sendInviteEmail(
+            {
+              email,
+              token: invite_token,
+              req: param.req,
+              baseName: base.title,
+              roles: param.baseUser.roles || 'editor',
             },
             ncMeta,
           );
@@ -322,6 +327,15 @@ export class BaseUsersService {
           .length === 1
       )
         NcError.badRequest('At least one owner is required');
+    }
+    const reverseOrderedProjectRoles = [...OrderedProjectRoles].reverse();
+    const newRolePower = reverseOrderedProjectRoles.indexOf(
+      param.baseUser.roles as ProjectRoles,
+    );
+
+    // Check if current user has sufficient privilege to assign this role
+    if (newRolePower > getProjectRolePower(param.req.user)) {
+      NcError.badRequest(`Insufficient privilege to assign this role`);
     }
 
     if (getProjectRolePower(targetUser) > getProjectRolePower(param.req.user)) {

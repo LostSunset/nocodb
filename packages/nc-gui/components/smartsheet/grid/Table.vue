@@ -206,18 +206,26 @@ const editEnabled = ref(false)
 const isGridCellMouseDown = ref(false)
 
 // #Context Menu
+const contextMenuClosing = ref(false)
+const contextMenuTarget = ref<{ row: number; col: number } | null>(null)
+
 const _contextMenu = ref(false)
+
 const contextMenu = computed({
   get: () => {
-    if (props.data?.some((r) => r.rowMeta.selected) && isDataReadOnly.value) return false
+    if (
+      (props.data?.some((r) => r.rowMeta.selected) && isDataReadOnly.value) ||
+      (contextMenuTarget.value === null && !props.data?.some((r) => r.rowMeta.selected) && !vSelectedAllRecords.value)
+    ) {
+      return false
+    }
+
     return _contextMenu.value
   },
   set: (val) => {
     _contextMenu.value = val
   },
 })
-const contextMenuClosing = ref(false)
-const contextMenuTarget = ref<{ row: number; col: number } | null>(null)
 
 const showContextMenu = (e: MouseEvent, target?: { row: number; col: number }) => {
   if (isSqlView.value) return
@@ -239,7 +247,8 @@ async function clearCell(ctx: { row: number; col: number } | null, skipUpdate = 
     isDataReadOnly.value ||
     !ctx ||
     !hasEditPermission.value ||
-    (!isLinksOrLTAR(fields.value[ctx.col]) && isVirtualCol(fields.value[ctx.col]))
+    (!isLinksOrLTAR(fields.value[ctx.col]) && isVirtualCol(fields.value[ctx.col])) ||
+    fields.value[ctx.col].readonly
   )
     return
 
@@ -358,7 +367,7 @@ async function clearCell(ctx: { row: number; col: number } | null, skipUpdate = 
 }
 
 function makeEditable(row: Row, col: ColumnType) {
-  if (!hasEditPermission.value || editEnabled.value || isView || readOnly.value || isSystemColumn(col)) {
+  if (!hasEditPermission.value || editEnabled.value || isView || readOnly.value || isSystemColumn(col) || col.readonly) {
     return
   }
 
@@ -1010,6 +1019,8 @@ async function clearSelectedRangeOfCells() {
 
       // skip readonly columns
       if (isReadonly(col)) continue
+
+      if (col.readonly) continue
 
       row.row[col.title] = null
       props.push(col.title)

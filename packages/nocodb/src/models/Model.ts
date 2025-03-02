@@ -72,16 +72,23 @@ export default class Model implements TableType {
   views?: View[];
   meta?: Record<string, any> | string;
 
+  synced?: boolean;
+
   constructor(data: Partial<TableType | Model>) {
     Object.assign(this, data);
+  }
+
+  public static castType(data: Model): Model {
+    return data && new Model(data);
   }
 
   public async getColumns(
     context: NcContext,
     ncMeta = Noco.ncMeta,
     defaultViewId = undefined,
+    updateColumns = true,
   ): Promise<Column[]> {
-    this.columns = await Column.list(
+    const columns = await Column.list(
       context,
       {
         fk_model_id: this.id,
@@ -89,6 +96,10 @@ export default class Model implements TableType {
       },
       ncMeta,
     );
+
+    if (!updateColumns) return columns;
+
+    this.columns = columns;
 
     this.columnsById = this.columns.reduce((agg, c) => {
       agg[c.id] = c;
@@ -101,13 +112,8 @@ export default class Model implements TableType {
   public async getColumnsHash(
     context: NcContext,
     ncMeta = Noco.ncMeta,
-    updateColumns = false,
   ): Promise<string> {
-    const columns = await this.getColumns(context, ncMeta);
-
-    if (updateColumns) {
-      this.columns = columns;
-    }
+    const columns = await this.getColumns(context, ncMeta, undefined, false);
 
     return (this.columnsHash = hash(columns));
   }
@@ -185,6 +191,7 @@ export default class Model implements TableType {
       'type',
       'id',
       'meta',
+      'synced',
     ]);
 
     insertObj.mm = !!insertObj.mm;
@@ -335,7 +342,7 @@ export default class Model implements TableType {
       }
     }
 
-    return modelList.map((m) => new Model(m));
+    return modelList.map((m) => this.castType(m));
   }
 
   public static async listWithInfo(
@@ -383,7 +390,7 @@ export default class Model implements TableType {
       }
     }
 
-    return modelList.map((m) => new Model(m));
+    return modelList.map((m) => this.castType(m));
   }
 
   public static async get(
@@ -410,7 +417,7 @@ export default class Model implements TableType {
         await NocoCache.set(`${CacheScope.MODEL}:${modelData.id}`, modelData);
       }
     }
-    return modelData && new Model(modelData);
+    return this.castType(modelData);
   }
 
   public static async getByIdOrName(
@@ -447,7 +454,7 @@ export default class Model implements TableType {
     if (modelData) {
       modelData.meta = parseMetaProp(modelData);
       await NocoCache.set(`${CacheScope.MODEL}:${modelData.id}`, modelData);
-      return new Model(modelData);
+      return this.castType(modelData);
     }
     return null;
   }
@@ -488,7 +495,7 @@ export default class Model implements TableType {
       // modelData.sorts = await Sort.list({ modelId: modelData.id });
     }
     if (modelData) {
-      const m = new Model(modelData);
+      const m = this.castType(modelData);
 
       await m.getViews(context, false, ncMeta);
 
@@ -1107,7 +1114,7 @@ export default class Model implements TableType {
         await NocoCache.set(cacheKey, model.id);
         await NocoCache.set(`${CacheScope.MODEL}:${model.id}`, model);
       }
-      return model && new Model(model);
+      return this.castType(model);
     }
     return modelId && this.get(context, modelId);
   }
