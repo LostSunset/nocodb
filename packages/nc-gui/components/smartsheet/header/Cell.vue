@@ -20,8 +20,6 @@ const isGrid = inject(IsGridInj, ref(false))
 
 const isForm = inject(IsFormInj, ref(false))
 
-const isLocked = inject(IsLockedInj, ref(false))
-
 const isSurveyForm = inject(IsSurveyFormInj, ref(false))
 
 const isExpandedForm = inject(IsExpandedFormOpenInj, ref(false))
@@ -89,7 +87,7 @@ const isColumnEditAllowed = computed(() => {
 })
 
 const openHeaderMenu = (e?: MouseEvent, description = false) => {
-  if (isLocked.value || (isExpandedForm.value && e?.type === 'dblclick') || isExpandedBulkUpdateForm.value) return
+  if ((isExpandedForm.value && e?.type === 'dblclick') || isExpandedBulkUpdateForm.value) return
 
   if (!isForm.value && isUIAllowed('fieldEdit') && !isMobileMode.value && (isColumnEditAllowed.value || description)) {
     if (description) {
@@ -100,8 +98,6 @@ const openHeaderMenu = (e?: MouseEvent, description = false) => {
 }
 
 const openDropDown = (e: Event) => {
-  if (isLocked.value) return
-
   if (isForm.value || (!isUIAllowed('fieldEdit') && !isMobileMode.value)) return
 
   e.preventDefault()
@@ -119,7 +115,7 @@ const onVisibleChange = () => {
 }
 
 const onClick = (e: Event) => {
-  if (isMobileMode.value || !isUIAllowed('fieldEdit') || isLocked.value) return
+  if (isMobileMode.value || !isUIAllowed('fieldEdit')) return
 
   if (isDropDownOpen.value) {
     e.preventDefault()
@@ -205,7 +201,7 @@ const onClick = (e: Event) => {
       <span v-if="(column.rqd && !column.cdf) || required" class="text-red-500">&nbsp;*</span>
 
       <GeneralIcon
-        v-if="isExpandedForm && !isExpandedBulkUpdateForm && !isMobileMode && isUIAllowed('fieldEdit') && !isLocked"
+        v-if="isExpandedForm && !isExpandedBulkUpdateForm && !isMobileMode && isUIAllowed('fieldEdit')"
         icon="arrowDown"
         class="flex-none cursor-pointer ml-1 group-hover:visible w-4 h-4"
         :class="{
@@ -221,9 +217,9 @@ const onClick = (e: Event) => {
       <GeneralIcon icon="info" class="group-hover:opacity-100 !w-3.5 !h-3.5 !text-gray-500 flex-none" />
     </NcTooltip>
 
-    <template v-if="!hideMenu || meta.synced">
+    <template v-if="!hideMenu || meta?.synced">
       <div v-if="!isExpandedForm" class="flex-1" />
-      <div v-if="!isExpandedForm && meta.synced && column.readonly">
+      <div v-if="!isExpandedForm && meta?.synced && column.readonly">
         <NcTooltip class="flex items-center" placement="bottom">
           <template #title> This field is synced </template>
           <GeneralIcon icon="sync" class="flex-none !w-4 !h-4 !text-gray-500" />

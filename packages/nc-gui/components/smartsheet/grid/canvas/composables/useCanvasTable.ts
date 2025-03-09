@@ -159,7 +159,6 @@ export function useCanvasTable({
 
   const isPublicView = inject(IsPublicInj, ref(false))
   const readOnly = inject(ReadonlyInj, ref(false))
-  const isLocked = inject(IsLockedInj, ref(false))
 
   const { loadAutomation } = automationStore
   const actionManager = new ActionManager($api, loadAutomation, generateRows, meta, cachedRows, triggerRefreshCanvas)
@@ -172,7 +171,7 @@ export function useCanvasTable({
 
   const isDataEditAllowed = computed(() => isUIAllowed('dataEdit'))
 
-  const isFieldEditAllowed = computed(() => !isLocked.value && isUIAllowed('fieldAdd'))
+  const isFieldEditAllowed = computed(() => isUIAllowed('fieldAdd'))
 
   const isRowDraggingEnabled = computed(
     () => !selectedRows.value.length && isOrderColumnExists.value && !isRowReorderDisabled.value && !vSelectedAllRecords.value,
@@ -182,7 +181,7 @@ export function useCanvasTable({
     () => isDataEditAllowed.value && !isSqlView.value && !isPublicView.value && !meta.value?.synced,
   )
 
-  const isAddingColumnAllowed = computed(() => !readOnly.value && !isLocked.value && isFieldEditAllowed.value && !isSqlView.value)
+  const isAddingColumnAllowed = computed(() => !readOnly.value && isFieldEditAllowed.value && !isSqlView.value)
 
   const rowHeight = computed(() => (isMobileMode.value ? 56 : rowHeightInPx[`${rowHeightEnum?.value ?? 1}`] ?? 32))
 
@@ -927,7 +926,7 @@ export function useCanvasTable({
       column,
       row,
       minHeight: rowHeight.value,
-      height: column.uidt === UITypes.LongText ? 'auto' : rowHeight.value + 2,
+      height: [UITypes.LongText, UITypes.Formula].includes(column.uidt) ? 'auto' : rowHeight.value + 2,
       width: parseCellWidth(clickedColumn.width) + 2,
       fixed: clickedColumn.fixed,
     }
@@ -952,6 +951,7 @@ export function useCanvasTable({
           UITypes.Barcode,
           UITypes.QrCode,
           UITypes.LinkToAnotherRecord,
+          UITypes.Formula,
         ].includes(column.uidt)
       ) {
         makeEditable(row, clickedColumn)

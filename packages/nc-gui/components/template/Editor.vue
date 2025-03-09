@@ -58,7 +58,6 @@ const reloadHook = inject(ReloadViewDataHookInj, createEventHook())
 const useForm = Form.useForm
 
 const { $api, $state } = useNuxtApp()
-const baseURL = $api.instance.defaults.baseURL
 
 const { addTab } = useTabs()
 
@@ -584,11 +583,6 @@ async function importTemplate() {
           tab.title = createdTable.title as string
           tab.baseId = base.value.id as string
         }
-
-        // set display value
-        if (createdTable?.columns?.[0]?.id) {
-          await $api.dbTableColumn.primaryColumnSet(createdTable.columns[0].id as string)
-        }
       }
 
       // bulk insert data
@@ -646,7 +640,7 @@ function mapDefaultColumns() {
     for (const col of importColumns[i]) {
       const o = { srcCn: col.column_name, srcTitle: col.title, destCn: '', enabled: true }
       if (columns.value) {
-        const tableColumn = columns.value.find((c) => c.title === col.column_name || c.column_name === col.column_name)
+        const tableColumn = columns.value.find((c) => c.title === col.title || c.column_name === col.column_name)
         if (tableColumn) {
           o.destCn = tableColumn.title as string
         } else {

@@ -71,7 +71,7 @@ export const UrlCellRenderer: CellRenderer = {
     const text = value?.toString().trim() ?? ''
 
     const isValid = text && isValidURL(text)
-    if (isValid) return
+    if (isValid || !text?.length) return
 
     const pv = column.pv
     const ctx = defaultOffscreen2DContext
@@ -136,7 +136,7 @@ export const UrlCellRenderer: CellRenderer = {
     })
 
     if (isBoxHovered({ x, y, width: xOffset - x, height: yOffset - y }, mousePosition)) {
-      window.open(/^https?:\/\//.test(text) ? text : `https://${text}`, '_blank')
+      confirmPageLeavingRedirect(text, '_blank')
       return true
     }
     return false
