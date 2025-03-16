@@ -110,7 +110,7 @@ export function useInfiniteData(args: {
   })
 
   const computedWhereFilter = computed(() => {
-    const filter = extractFilterFromXwhere(where?.value ?? '', columnsByAlias.value)
+    const { filters: filter } = extractFilterFromXwhere(where?.value ?? '', columnsByAlias.value)
 
     return filter.map((f) => {
       return { ...f, value: f.value ? f.value?.toString().replace(/(^%)(.*?)(%$)/, '$2') : f.value }
@@ -1235,6 +1235,7 @@ export function useInfiniteData(args: {
       data,
       meta.value?.columns as ColumnType[],
       getBaseType(viewMeta.value?.view?.source_id),
+      metas.value,
     )
 
     const changedFields = property ? [property] : Object.keys(row.row)

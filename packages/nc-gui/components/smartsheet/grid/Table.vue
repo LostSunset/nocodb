@@ -165,7 +165,7 @@ const rowHeight = computed(() => (isMobileMode.value ? 56 : rowHeightInPx[`${pro
 
 // #Permissions
 const { isUIAllowed, isDataReadOnly } = useRoles()
-const hasEditPermission = computed(() => isUIAllowed('dataEdit'))
+const hasEditPermission = computed(() => isUIAllowed('dataEdit') && !isSqlView.value)
 const isAddingColumnAllowed = computed(() => !readOnly.value && isUIAllowed('fieldAdd') && !isSqlView.value)
 
 const { onDrag, onDragStart, onDragEnd, draggedCol, dragColPlaceholderDomRef, toBeDroppedColId } = useColumnDrag({
@@ -605,12 +605,15 @@ const {
 
     const cmdOrCtrl = isMac() ? e.metaKey : e.ctrlKey
     const altOrOptionKey = e.altKey
-    if (e.key === ' ') {
+    if (e.key === ' ' && !e.shiftKey) {
       const isRichModalOpen = isExpandedCellInputExist()
 
-      if (isCellActive.value && !editEnabled.value && hasEditPermission.value && activeCell.row !== null && !isRichModalOpen) {
+      if (!editEnabled.value && isCellActive.value && activeCell.row !== null && !isRichModalOpen) {
         e.preventDefault()
         const row = dataRef.value[activeCell.row]
+
+        if (!row) return true
+
         expandForm?.(row)
         return true
       }
@@ -1474,7 +1477,8 @@ const showFillHandle = computed(
     !isViewDataLoading.value &&
     !isPaginationLoading.value &&
     dataRef.value.length &&
-    !selectedReadonly.value,
+    !selectedReadonly.value &&
+    !isSqlView.value,
 )
 
 watch(
@@ -2226,6 +2230,10 @@ onKeyStroke('ArrowDown', onDown)
                       <SmartsheetTableDataCell
                         v-if="fields[0]"
                         :key="fields[0].id"
+                        :active="
+                          (activeCell.row === rowIndex && activeCell.col === 0) ||
+                          (selectedRange._start?.row === rowIndex && selectedRange._start?.col === 0)
+                        "
                         class="cell relative nc-grid-cell cursor-pointer"
                         :class="{
                           'active': selectRangeMap[`${rowIndex}-0`],
@@ -2298,6 +2306,10 @@ onKeyStroke('ArrowDown', onDown)
                       <SmartsheetTableDataCell
                         v-for="{ field: columnObj, index: colIndex } of visibleFields"
                         :key="`cell-${colIndex}-${rowIndex}`"
+                        :active="
+                          (activeCell.row === rowIndex && activeCell.col === colIndex) ||
+                          (selectedRange._start?.row === rowIndex && selectedRange._start?.col === colIndex)
+                        "
                         class="cell relative nc-grid-cell cursor-pointer"
                         :class="{
                           'active': selectRangeMap[`${rowIndex}-${colIndex}`],
