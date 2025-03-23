@@ -513,6 +513,7 @@
     "isNotNull": "تهی نیست"
   },
   "title": {
+    "confirmSnapshotRestore": "Confirm Snapshot Restore",
     "urlFilters": "URL Filters",
     "creatingScript": "Creating Script",
     "searchWebhook": "جستجوی وب‌هوک",
@@ -685,6 +686,20 @@
     "reAssignViewModalSubtitle": "Once reassigned, current owner will no longer be able to edit the view configuration."
   },
   "labels": {
+    "restoringSnapshot": "Restoring Snapshot",
+    "note": "Note:",
+    "snapshotRestoreMessage1": "Restoring this snapshot will not affect the existing base.",
+    "snapshotRestoreMessage2": "On restore, a new base will be created in the selected workspace.",
+    "snapshotRestoreConfirmation": "Are you sure you want to restore this base snapshot.",
+    "tryAgain": "Try again",
+    "goToBase": "Go to Base",
+    "errorMessage": "Error message:",
+    "duplicateBaseBaseTitle": "Duplicate Base \"{baseTitle}\"",
+    "duplicateBaseSuccessfull": "Base Duplication Successfull",
+    "duplicateBaseFailed": "Base Duplication Failed",
+    "duplicateBaseMessage": "You can only duplicate bases into workspaces where you have creator access or above.",
+    "snapshotBaseRestoreMessage": "You can only restore into workspaces where you have creator access or above.",
+    "currentWorkspace": "Current workspace",
     "latitude": "Latitude",
     "longitude": "Longitude",
     "failed": "Failed",
@@ -972,6 +987,7 @@
     "csv": "CSV",
     "csvFile": "فایل CSV",
     "json": "JSON",
+    "jsonCapitalized": "Json",
     "jsonFile": "فایل JSON",
     "excel": "Excel",
     "microsoftExcel": "Microsoft Excel",
@@ -1080,8 +1096,11 @@
     "apis": "API‌ها",
     "apiSnippet": "قطعه‌کدهای API",
     "includeData": "شامل داده",
-    "includeView": "شامل نمای",
-    "includeWebhook": "شامل وب‌هوک",
+    "includeRecords": "Include records",
+    "baseDuplicateMessage": "Note: Audit logs & integrations will not be duplicated.",
+    "includeView": "Include views",
+    "includeWebhook": "Include webhook",
+    "includeComments": "Include comments",
     "zoomInToViewColumns": "بزرگنمایی برای مشاهده ستون‌ها",
     "embedInSite": "قرار دادن این نما در سایت شما",
     "titleRequired": "عنوان ضروری است.",
@@ -1137,7 +1156,9 @@
     "fillForm": "Fill Form",
     "proceedToLink": "Proceed to link",
     "currentOwner": "Current owner",
-    "newOwner": "New owner"
+    "newOwner": "New owner",
+    "addFromUrl": "Add from URL",
+    "enterJson": "Enter JSON"
   },
   "activity": {
     "clickToResolve": "Click to resolve",
@@ -1407,6 +1428,7 @@
     "clearForm": "فرم را پاک کنید",
     "addFieldFromFormView": "افزودن فیلد",
     "selectAllFields": "انتخاب همه فیلد‌ها",
+    "deselectAllFields": "Deselect all fields",
     "preFilledFields": {
       "title": "فعال کردن فیلدهای از پیش پرشده",
       "default": "پیش‌فرض",
@@ -1474,7 +1496,8 @@
     "sourceDataIsReadonly": "Source data is readonly",
     "schemaChangeDisabledFormSqlView": "Schema editing is disabled for this SQL View.",
     "shiftSpace": "Shift + Space",
-    "expandShiftSpace": "Expand 'Shift + Space'"
+    "expandShiftSpace": "Expand 'Shift + Space'",
+    "selectAllMappedFields": "Select all mapped fields"
   },
   "placeholder": {
     "searchIcons": "جستجو آیکون",
@@ -1686,7 +1709,10 @@
         "fieldVisibility": "شما نمی‌توانید قابلیت مشاهده فیلدی را که در حال ویرایش است تغییر دهید. لطفاً ابتدا تغییرات را ذخیره یا حذف کنید.",
         "moveEditedField": "شما نمی‌توانید فیلدی که در حال ویرایش است را جابجا کنید. ابتدا تغییرات را ذخیره کنید یا لغو کنید",
         "moveDeletedField": "شما نمی‌توانید فیلدی که حذف شده است را جابجا کنید. ابتدا تغییرات را ذخیره کنید یا لغو کنید"
-      }
+      },
+      "reachedUploadLimit": "Reached upload limit",
+      "youCanOnlyUploadMaxLimitFilesAtATime": "You can only upload {limit} {type} file at a time",
+      "youCanOnlyUploadMaxLimitFilesAtATimePlural": "You can only upload {limit} {type} files at a time"
     },
     "info": {
       "inviteSent": "Invitation sent successfully",
@@ -1987,7 +2013,9 @@
       "columnVisibilityUpdateFailed": "Failed to update field visibility",
       "unsupportedCharacter": "Unsupported character: {char}",
       "unsupportedCharacters": "Unsupported characters: {char}",
-      "notSupported": "Not supported"
+      "notSupported": "Not supported",
+      "duplicateTableName": "Duplicate table name",
+      "importError": "Import Error"
     },
     "toast": {
       "exportMetadata": "فراداده پروژه با موفقیت خارج شد",
@@ -2037,6 +2065,8 @@
       "embeddableHTMLCodeCopied": "کد HTML امبد کپی شد!",
       "userDetailsUpdated": "اطلاعات کاربر با موفقیت به‌روزرسانی شد",
       "tableDataImported": "داده جدول با موفقیت ایمپورد شد",
+      "tableImported": "Successfully imported table",
+      "tableImportedPlural": "Successfully imported tables",
       "webhookUpdated": "جزئیات وب‌هوک با موفقیت به‌روزرسانی شد",
       "webhookDeleted": "هوک با موفقیت حذف شد",
       "webhookTested": "وب هوک با موفقیت تست شد",

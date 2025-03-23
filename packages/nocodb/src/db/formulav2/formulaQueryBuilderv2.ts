@@ -5,6 +5,7 @@ import {
   jsepCurlyHook,
   JSEPNode,
   LongTextAiMetaProp,
+  NcErrorType,
   RelationTypes,
   UITypes,
   validateDateWithUnknownFormat,
@@ -31,14 +32,14 @@ import type Column from '~/models/Column';
 import type { User } from '~/models';
 import type { BaseModelSqlv2 } from '~/db/BaseModelSqlv2';
 import type CustomKnex from '~/db/CustomKnex';
+import { BaseUser, ButtonColumn } from '~/models';
 import Model from '~/models/Model';
 import NocoCache from '~/cache/NocoCache';
 import { CacheScope } from '~/utils/globals';
 import { convertDateFormatForConcat } from '~/helpers/formulaFnHelper';
 import FormulaColumn from '~/models/FormulaColumn';
-import { BaseUser, ButtonColumn } from '~/models';
 import { getRefColumnIfAlias } from '~/helpers';
-import { ExternalTimeout, NcError } from '~/helpers/catchError';
+import { ExternalTimeout, NcBaseErrorv2, NcError } from '~/helpers/catchError';
 
 const logger = new Logger('FormulaQueryBuilderv2');
 
@@ -188,9 +189,15 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
       case UITypes.Formula:
       case UITypes.Button:
         {
-          aliasToColumn[col.id] = async () => {
-            if (params.parentColumns.has(col.id)) {
-              NcError.formulaError('Circular reference detected');
+          aliasToColumn[col.id] = async (parentColumns?: Set<string>) => {
+            if (parentColumns?.has(col.id)) {
+              NcError.formulaError('Circular reference detected', {
+                details: {
+                  columnId: col.id,
+                  modelId: model.id,
+                  parentColumnIds: Array.from(parentColumns),
+                },
+              });
             }
 
             const formulOption = await col.getColOptions<
@@ -205,7 +212,7 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
               tableAlias,
               parsedTree: formulOption.getParsedTree(),
               baseUsers,
-              parentColumns: new Set([col.id, ...params.parentColumns]),
+              parentColumns: new Set([col.id, ...(parentColumns ?? [])]),
             });
             builder.sql = '(' + builder.sql + ')';
             return {
@@ -215,14 +222,22 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
         }
         break;
       case UITypes.Lookup:
-        aliasToColumn[col.id] = async (): Promise<any> => {
+      case UITypes.LinkToAnotherRecord:
+        aliasToColumn[col.id] = async (
+          parentColumns?: Set<string>,
+        ): Promise<any> => {
           let aliasCount = 0;
           let selectQb;
           let isArray = false;
           const alias = `__nc_formula${aliasCount++}`;
-          const lookup = await col.getColOptions<LookupColumn>(context);
+          const lookup =
+            col.uidt === UITypes.Lookup
+              ? await col.getColOptions<LookupColumn>(context)
+              : null;
           {
-            const relationCol = await lookup.getRelationColumn(context);
+            const relationCol = lookup
+              ? await lookup.getRelationColumn(context)
+              : col;
             const relation =
               await relationCol.getColOptions<LinkToAnotherRecordColumn>(
                 context,
@@ -243,6 +258,9 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
                 ? RelationTypes.BELONGS_TO
                 : RelationTypes.HAS_MANY;
             }
+            let lookupColumn = lookup
+              ? await lookup.getLookupColumn(context)
+              : null;
 
             switch (relationType) {
               case RelationTypes.BELONGS_TO:
@@ -260,6 +278,7 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
                     }.${childColumn.column_name}`,
                   ]),
                 );
+                lookupColumn = lookupColumn ?? parentModel.displayValue;
                 break;
               case RelationTypes.HAS_MANY:
                 isArray = relation.type !== RelationTypes.ONE_TO_ONE;
@@ -277,6 +296,7 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
                     }.${parentColumn.column_name}`,
                   ]),
                 );
+                lookupColumn = lookupColumn ?? childModel.displayValue;
                 break;
               case RelationTypes.MANY_TO_MANY:
                 {
@@ -313,11 +333,11 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
                         }.${childColumn.column_name}`,
                       ]),
                     );
+                  lookupColumn = lookupColumn ?? parentModel.displayValue;
                 }
                 break;
             }
 
-            let lookupColumn = await lookup.getLookupColumn(context);
             let prevAlias = alias;
             while (lookupColumn.uidt === UITypes.Lookup) {
               const nestedAlias = `__nc_formula${aliasCount++}`;
@@ -580,8 +600,14 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
                   const formulaOption =
                     await lookupColumn.getColOptions<FormulaColumn>(context);
                   const lookupModel = await lookupColumn.getModel(context);
-                  if (params.parentColumns.has(lookupColumn.id)) {
-                    NcError.formulaError('Circular reference detected');
+                  if (parentColumns?.has(lookupColumn.id)) {
+                    NcError.formulaError('Circular reference detected', {
+                      details: {
+                        columnId: lookupColumn.id,
+                        modelId: model.id,
+                        parentColumnIds: Array.from(parentColumns),
+                      },
+                    });
                   }
                   const { builder } = await _formulaQueryBuilder({
                     baseModelSqlv2,
@@ -592,8 +618,9 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
                     parsedTree: formulaOption.getParsedTree(),
                     parentColumns: new Set([
                       lookupColumn.id,
-                      ...params.parentColumns,
+                      ...(parentColumns ?? []),
                     ]),
+                    tableAlias: prevAlias,
                   });
                   if (isArray) {
                     const qb = selectQb;
@@ -646,7 +673,9 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
         break;
       case UITypes.Rollup:
       case UITypes.Links:
-        aliasToColumn[col.id] = async (): Promise<any> => {
+        aliasToColumn[col.id] = async (
+          _parentColumns?: Set<string>,
+        ): Promise<any> => {
           const qb = await genRollupSelectv2({
             baseModelSqlv2,
             knex,
@@ -654,161 +683,6 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
             alias: tableAlias,
           });
           return { builder: knex.raw(qb.builder).wrap('(', ')') };
-        };
-        break;
-      case UITypes.LinkToAnotherRecord:
-        aliasToColumn[col.id] = async (): Promise<any> => {
-          const alias = `__nc_formula_ll`;
-          const relation = await col.getColOptions<LinkToAnotherRecordColumn>(
-            context,
-          );
-          // if (relation.type !== RelationTypes.BELONGS_TO) continue;
-
-          const colOptions = (await col.getColOptions(
-            context,
-          )) as LinkToAnotherRecordColumn;
-          const childColumn = await colOptions.getChildColumn(context);
-          const parentColumn = await colOptions.getParentColumn(context);
-          const childModel = await childColumn.getModel(context);
-          await childModel.getColumns(context);
-          const parentModel = await parentColumn.getModel(context);
-          await parentModel.getColumns(context);
-
-          let relationType = relation.type;
-
-          if (relationType === RelationTypes.ONE_TO_ONE) {
-            relationType = col.meta?.bt
-              ? RelationTypes.BELONGS_TO
-              : RelationTypes.HAS_MANY;
-          }
-
-          let selectQb;
-          if (relationType === RelationTypes.BELONGS_TO) {
-            const linkedDisplayValue = await getLinkedColumnDisplayValue({
-              model: parentModel,
-              aliasToColumn: { ...aliasToColumn, [col.id]: null },
-              parentColumns: new Set(params.parentColumns),
-            });
-            selectQb = knex(baseModelSqlv2.getTnPath(parentModel.table_name))
-              .select(
-                typeof linkedDisplayValue === 'string'
-                  ? linkedDisplayValue
-                  : knex.raw(linkedDisplayValue.builder).wrap('(', ')'),
-              )
-              .where(
-                `${baseModelSqlv2.getTnPath(parentModel.table_name)}.${
-                  parentColumn.column_name
-                }`,
-                knex.raw(`??`, [
-                  `${
-                    tableAlias ??
-                    baseModelSqlv2.getTnPath(childModel.table_name)
-                  }.${childColumn.column_name}`,
-                ]),
-              );
-          } else if (relationType == RelationTypes.HAS_MANY) {
-            const qb = knex(baseModelSqlv2.getTnPath(childModel.table_name))
-              // .select(knex.raw(`GROUP_CONCAT(??)`, [childModel?.pv?.title]))
-              .where(
-                `${baseModelSqlv2.getTnPath(childModel.table_name)}.${
-                  childColumn.column_name
-                }`,
-                knex.raw(`??`, [
-                  `${
-                    tableAlias ??
-                    baseModelSqlv2.getTnPath(parentModel.table_name)
-                  }.${parentColumn.column_name}`,
-                ]),
-              );
-            const childDisplayValue = await getLinkedColumnDisplayValue({
-              model: childModel,
-              aliasToColumn: { ...aliasToColumn, [col.id]: null },
-              parentColumns: new Set(params.parentColumns),
-            });
-            selectQb = (fn) =>
-              knex
-                .raw(
-                  getAggregateFn(fn)({
-                    qb,
-                    knex,
-                    cn:
-                      typeof childDisplayValue === 'string'
-                        ? childDisplayValue
-                        : childDisplayValue.builder,
-                  }),
-                )
-                .wrap('(', ')');
-            // getAggregateFn();
-          } else if (relationType == RelationTypes.MANY_TO_MANY) {
-            // todo:
-            // const qb = knex(childModel.title)
-            //   // .select(knex.raw(`GROUP_CONCAT(??)`, [childModel?.pv?.title]))
-            //   .where(
-            //     `${childModel.title}.${childColumn.title}`,
-            //     knex.raw(`??`, [`${parentModel.title}.${parentColumn.title}`])
-            //   );
-            //
-            // selectQb = fn =>
-            //   knex
-            //     .raw(
-            //       getAggregateFn(fn)({
-            //         qb,
-            //         knex,
-            //         cn: childModel?.pv?.title
-            //       })
-            //     )
-            //     .wrap('(', ')');
-            //
-            // // getAggregateFn();
-
-            //   todo: provide unique alias
-
-            const mmModel = await relation.getMMModel(context);
-            const mmParentColumn = await relation.getMMParentColumn(context);
-            const mmChildColumn = await relation.getMMChildColumn(context);
-
-            const qb = knex(
-              knex.raw(`?? as ??`, [
-                baseModelSqlv2.getTnPath(parentModel.table_name),
-                alias,
-              ]),
-            )
-              .join(
-                `${baseModelSqlv2.getTnPath(mmModel.table_name)}`,
-                `${baseModelSqlv2.getTnPath(mmModel.table_name)}.${
-                  mmParentColumn.column_name
-                }`,
-                `${alias}.${parentColumn.column_name}`,
-              )
-              .where(
-                `${baseModelSqlv2.getTnPath(mmModel.table_name)}.${
-                  mmChildColumn.column_name
-                }`,
-                knex.raw(`??`, [
-                  `${
-                    tableAlias ??
-                    baseModelSqlv2.getTnPath(childModel.table_name)
-                  }.${childColumn.column_name}`,
-                ]),
-              );
-            selectQb = (fn) =>
-              knex
-                .raw(
-                  getAggregateFn(fn)({
-                    qb,
-                    knex,
-                    cn: parentModel?.displayValue?.column_name,
-                  }),
-                )
-                .wrap('(', ')');
-          }
-          if (selectQb)
-            return {
-              builder:
-                typeof selectQb === 'function'
-                  ? selectQb
-                  : knex.raw(selectQb as any).wrap('(', ')'),
-            };
         };
         break;
       case UITypes.CreatedTime:
@@ -822,7 +696,9 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
             break;
           }
           if (knex.clientType().startsWith('mysql')) {
-            aliasToColumn[col.id] = async (): Promise<any> => {
+            aliasToColumn[col.id] = async (
+              _parentColumns?: Set<string>,
+            ): Promise<any> => {
               return {
                 // convert from DB timezone to UTC
                 builder: knex.raw(
@@ -836,7 +712,9 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
             refCol.dt !== 'timestamp with time zone' &&
             refCol.dt !== 'timestamptz'
           ) {
-            aliasToColumn[col.id] = async (): Promise<any> => {
+            aliasToColumn[col.id] = async (
+              _parentColumns?: Set<string>,
+            ): Promise<any> => {
               return {
                 // convert from DB timezone to UTC
                 builder: knex
@@ -871,7 +749,9 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
       case UITypes.CreatedBy:
       case UITypes.LastModifiedBy:
         {
-          aliasToColumn[col.id] = async (): Promise<any> => {
+          aliasToColumn[col.id] = async (
+            _parentColumns?: Set<string>,
+          ): Promise<any> => {
             baseUsers =
               baseUsers ??
               (await BaseUser.getUsersList(context, {
@@ -1042,33 +922,134 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
           }
           break;
         case 'URL':
+          /**
+           * Added extra whitespace around URI and LABEL content to avoid conflicts during regex parsing.
+           *
+           * Reason for Adding Whitespace:
+           * - Our URI syntax uses parentheses `(` and `)` to wrap URL and label content.
+           * - Escaped parentheses `\(` and `\)` are allowed inside content, but without extra space,
+           *   trailing backslashes (e.g., `\)`) near the closing parenthesis can cause incomplete group matches.
+           * - Adding leading and trailing spaces around the content (`URI::( ` and ` )`) ensures that
+           *   closing parentheses after escaped characters are parsed correctly.
+           *
+           * Example Case:
+           * - Without space: `URI::(https://github.com/nocodb/nocodb/pull/10707\)`
+           *   - Results in incomplete or invalid group matches.
+           * - With space: `URI::( https://github.com/nocodb/nocodb/pull/10707\ )`
+           *   - Handles escaped characters and parses content as expected.
+           *
+           * How It Works:
+           * - The backend adds a leading space after `URI::(` and before the closing `)`.
+           * - For labels, a leading space is added after `LABEL::(` and before `)`.
+           * - The frontend regex is updated to accommodate these changes.
+           *
+           */
           return fn(
             {
               type: JSEPNode.CALL_EXP,
               arguments: [
                 {
                   type: JSEPNode.LITERAL,
-                  value: 'URI::(',
-                  raw: '"URI::("',
+                  value: 'URI::( ',
+                  raw: '"URI::( "',
                 },
-                pt.arguments[0],
+                // wrap with replace function to escape parenthesis since it has special meaning in our URI syntax
+                {
+                  type: JSEPNode.CALL_EXP,
+                  arguments: [
+                    {
+                      type: JSEPNode.CALL_EXP,
+                      arguments: [
+                        pt.arguments[0],
+                        {
+                          type: JSEPNode.LITERAL,
+                          value: '(',
+                          raw: '"("',
+                        },
+                        {
+                          type: JSEPNode.LITERAL,
+                          value: '\\(',
+                          raw: '"\\("',
+                        },
+                      ],
+                      callee: {
+                        type: 'Identifier',
+                        name: 'REPLACE',
+                      },
+                    },
+                    {
+                      type: JSEPNode.LITERAL,
+                      value: ')',
+                      raw: '")"',
+                    },
+                    {
+                      type: JSEPNode.LITERAL,
+                      value: '\\)',
+                      raw: '"\\)"',
+                    },
+                  ],
+                  callee: {
+                    type: 'Identifier',
+                    name: 'REPLACE',
+                  },
+                },
                 {
                   type: JSEPNode.LITERAL,
-                  value: ')',
-                  raw: '")"',
+                  value: ' )',
+                  raw: '" )"',
                 },
                 ...(pt.arguments[1]
                   ? ([
                       {
                         type: JSEPNode.LITERAL,
-                        value: ' LABEL::(',
-                        raw: ' LABEL::(',
+                        value: ' LABEL::( ',
+                        raw: ' LABEL::( ',
                       },
-                      pt.arguments[1],
+
+                      // wrap with replace function to escape parenthesis since it has special meaning in our URI syntax
+                      {
+                        type: JSEPNode.CALL_EXP,
+                        arguments: [
+                          {
+                            type: JSEPNode.CALL_EXP,
+                            arguments: [
+                              pt.arguments[1],
+                              {
+                                type: JSEPNode.LITERAL,
+                                value: '(',
+                                raw: '"("',
+                              },
+                              {
+                                type: JSEPNode.LITERAL,
+                                value: '\\(',
+                                raw: '"\\("',
+                              },
+                            ],
+                            callee: {
+                              type: 'Identifier',
+                              name: 'REPLACE',
+                            },
+                          },
+                          {
+                            type: JSEPNode.LITERAL,
+                            value: ')',
+                            raw: '")"',
+                          },
+                          {
+                            type: JSEPNode.LITERAL,
+                            value: '\\)',
+                            raw: '"\\)"',
+                          },
+                        ],
+                        callee: {
+                          type: 'Identifier',
+                          name: 'REPLACE',
+                        },
+                      },
                       {
                         type: JSEPNode.LITERAL,
-                        value: ')',
-                        raw: ')',
+                        value: ' )',
+                        raw: '" )"',
                       },
                     ] as ParsedFormulaNode[])
                   : ([] as ParsedFormulaNode[])),
@@ -1140,7 +1121,8 @@ async function _formulaQueryBuilder(params: FormulaQueryBuilderBaseParams) {
     } else if (pt.type === 'Literal') {
       return { builder: knex.raw(`? ${colAlias}`, [pt.value]) };
     } else if (pt.type === 'Identifier') {
-      const { builder } = (await aliasToColumn?.[pt.name]?.()) || {};
+      const { builder } =
+        (await aliasToColumn?.[pt.name]?.(params.parentColumns)) || {};
       if (typeof builder === 'function') {
         return { builder: knex.raw(`??${colAlias}`, builder(pt.fnName)) };
       }
@@ -1514,30 +1496,46 @@ export default async function formulaQueryBuilderv2(
       }
     }
   } catch (e) {
-    if (!validateFormula) throw e;
+    // Mark formula error if formula validation is invoked
+    // or if a circular reference error occurs and a column is provided
+    if (
+      validateFormula ||
+      (column?.id &&
+        e instanceof NcBaseErrorv2 &&
+        e.error === NcErrorType.FORMULA_CIRCULAR_REF_ERROR)
+    ) {
+      console.error(e);
 
-    console.error(e);
-    if (column) {
-      if (column?.uidt === UITypes.Button) {
-        await ButtonColumn.update(context, column.id, {
-          error: null,
-        });
-        // update cache to reflect the error in UI
-        await NocoCache.update(`${CacheScope.COL_BUTTON}:${column.id}`, {
-          error: e.message,
-        });
-      } else if (!(e instanceof ExternalTimeout)) {
-        // add formula error to show in UI
-        await FormulaColumn.update(context, column.id, {
-          error: e.message,
-        });
+      if (column) {
+        if (column?.uidt === UITypes.Button) {
+          await ButtonColumn.update(context, column.id, {
+            error: null,
+          });
+          // update cache to reflect the error in UI
+          await NocoCache.update(`${CacheScope.COL_BUTTON}:${column.id}`, {
+            error: e.message,
+          });
+        } else if (!(e instanceof ExternalTimeout)) {
+          // add formula error to show in UI
+          await FormulaColumn.update(context, column.id, {
+            error: e.message,
+          });
 
-        // update cache to reflect the error in UI
-        await NocoCache.update(`${CacheScope.COL_FORMULA}:${column.id}`, {
-          error: e.message,
-        });
+          // update cache to reflect the error in UI
+          await NocoCache.update(`${CacheScope.COL_FORMULA}:${column.id}`, {
+            error: e.message,
+          });
+        }
       }
+    } else {
+      throw e;
     }
+
+    // if it's a formula error, throw it
+    if (e instanceof NcBaseErrorv2) {
+      throw e;
+    }
+
     NcError.formulaError(e.message);
   }
   return qb;

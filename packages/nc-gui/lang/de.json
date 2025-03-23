@@ -513,6 +513,7 @@
     "isNotNull": "ist nicht Null"
   },
   "title": {
+    "confirmSnapshotRestore": "Confirm Snapshot Restore",
     "urlFilters": "URL Filters",
     "creatingScript": "Skript erstellen",
     "searchWebhook": "Webhook suchen",
@@ -685,6 +686,20 @@
     "reAssignViewModalSubtitle": "Once reassigned, current owner will no longer be able to edit the view configuration."
   },
   "labels": {
+    "restoringSnapshot": "Restoring Snapshot",
+    "note": "Note:",
+    "snapshotRestoreMessage1": "Restoring this snapshot will not affect the existing base.",
+    "snapshotRestoreMessage2": "On restore, a new base will be created in the selected workspace.",
+    "snapshotRestoreConfirmation": "Are you sure you want to restore this base snapshot.",
+    "tryAgain": "Try again",
+    "goToBase": "Go to Base",
+    "errorMessage": "Error message:",
+    "duplicateBaseBaseTitle": "Duplicate Base \"{baseTitle}\"",
+    "duplicateBaseSuccessfull": "Base Duplication Successfull",
+    "duplicateBaseFailed": "Base Duplication Failed",
+    "duplicateBaseMessage": "You can only duplicate bases into workspaces where you have creator access or above.",
+    "snapshotBaseRestoreMessage": "You can only restore into workspaces where you have creator access or above.",
+    "currentWorkspace": "Current workspace",
     "latitude": "Latitude",
     "longitude": "Longitude",
     "failed": "Failed",
@@ -972,6 +987,7 @@
     "csv": "CSV",
     "csvFile": "CSV-Datei",
     "json": "JSON",
+    "jsonCapitalized": "Json",
     "jsonFile": "JSON-Datei",
     "excel": "Excel",
     "microsoftExcel": "Microsoft Excel",
@@ -1080,8 +1096,11 @@
     "apis": "APIs",
     "apiSnippet": "API-Snippets",
     "includeData": "Daten einbeziehen",
-    "includeView": "Ansicht einbeziehen",
-    "includeWebhook": "Webhook einbeziehen",
+    "includeRecords": "Include records",
+    "baseDuplicateMessage": "Note: Audit logs & integrations will not be duplicated.",
+    "includeView": "Include views",
+    "includeWebhook": "Include webhook",
+    "includeComments": "Include comments",
     "zoomInToViewColumns": "Vergrößern, um Spalten zu sehen",
     "embedInSite": "Diese Ansicht in Ihrer Website einbetten",
     "titleRequired": "-Titel ist erforderlich",
@@ -1137,7 +1156,9 @@
     "fillForm": "Fill Form",
     "proceedToLink": "Proceed to link",
     "currentOwner": "Current owner",
-    "newOwner": "New owner"
+    "newOwner": "New owner",
+    "addFromUrl": "Add from URL",
+    "enterJson": "Enter JSON"
   },
   "activity": {
     "clickToResolve": "Zum Klären klicken",
@@ -1407,6 +1428,7 @@
     "clearForm": "Formular zurücksetzen",
     "addFieldFromFormView": "Feld hinzufügen",
     "selectAllFields": "Alle Felder auswählen",
+    "deselectAllFields": "Deselect all fields",
     "preFilledFields": {
       "title": "Automatisches Ausfüllen aktivieren",
       "default": "Standard",
@@ -1474,7 +1496,8 @@
     "sourceDataIsReadonly": "Quelldaten sind schreibgeschützt.",
     "schemaChangeDisabledFormSqlView": "Schema editing is disabled for this SQL View.",
     "shiftSpace": "Shift + Space",
-    "expandShiftSpace": "Expand 'Shift + Space'"
+    "expandShiftSpace": "Expand 'Shift + Space'",
+    "selectAllMappedFields": "Select all mapped fields"
   },
   "placeholder": {
     "searchIcons": "Icons suchen",
@@ -1686,7 +1709,10 @@
         "fieldVisibility": "Sie können die Sichtbarkeit eines Feldes, das Sie gerade bearbeiten, nicht ändern. Bitte Änderungen zuerst speichern oder verwerfen.",
         "moveEditedField": "Sie können ein Feld, das bearbeitet wird, nicht verschieben. Speichern oder verwerfen Sie zuerst die Änderungen",
         "moveDeletedField": "Sie können ein gelöschtes Feld nicht verschieben. Speichern oder verwerfen Sie zuerst die Änderungen"
-      }
+      },
+      "reachedUploadLimit": "Reached upload limit",
+      "youCanOnlyUploadMaxLimitFilesAtATime": "You can only upload {limit} {type} file at a time",
+      "youCanOnlyUploadMaxLimitFilesAtATimePlural": "You can only upload {limit} {type} files at a time"
     },
     "info": {
       "inviteSent": "Einladung erfolgreich gesendet",
@@ -1987,7 +2013,9 @@
       "columnVisibilityUpdateFailed": "Fehler beim Aktualisieren der Feldsichtbarkeit",
       "unsupportedCharacter": "Nicht unterstütztes Zeichen: {char}",
       "unsupportedCharacters": "Nicht unterstützte Zeichen: {char}",
-      "notSupported": "Nicht unterstützt"
+      "notSupported": "Nicht unterstützt",
+      "duplicateTableName": "Duplicate table name",
+      "importError": "Import Error"
     },
     "toast": {
       "exportMetadata": "Projektmetadaten erfolgreich exportiert",
@@ -2037,6 +2065,8 @@
       "embeddableHTMLCodeCopied": "Einbettbarer HTML-Code in die Zwischenablage kopiert",
       "userDetailsUpdated": "Benutzerdaten erfolgreich aktualisiert",
       "tableDataImported": "Tabellendaten erfolgreich importiert",
+      "tableImported": "Successfully imported table",
+      "tableImportedPlural": "Successfully imported tables",
       "webhookUpdated": "Webhook-Details erfolgreich aktualisiert",
       "webhookDeleted": "Hook erfolgreich gelöscht",
       "webhookTested": "Webhook erfolgreich getestet",
