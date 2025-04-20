@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { useTitle } from '@vueuse/core'
+import { PlanFeatureTypes, PlanTitles } from 'nocodb-sdk'
 
 const props = defineProps<{
   workspaceId?: string
@@ -8,9 +9,9 @@ const props = defineProps<{
 const router = useRouter()
 const route = router.currentRoute
 
-const { isUIAllowed } = useRoles()
+const { t } = useI18n()
 
-const { isFeatureEnabled } = useBetaFeatureToggle()
+const { isUIAllowed } = useRoles()
 
 const workspaceStore = useWorkspace()
 
@@ -20,6 +21,8 @@ const { loadCollaborators, loadWorkspace } = workspaceStore
 
 const orgStore = useOrg()
 const { orgId, org } = storeToRefs(orgStore)
+
+const { isWsAuditEnabled, handleUpgradePlan, isPaymentEnabled } = useEeConfig()
 
 const currentWorkspace = computedAsync(async () => {
   if (deletingWorkspace.value) return
@@ -42,6 +45,16 @@ const tab = computed({
     return route.value.query?.tab ?? 'collaborators'
   },
   set(tab: string) {
+    if (!isWsAuditEnabled.value && tab === 'audits') {
+      return handleUpgradePlan({
+        title: t('upgrade.upgradeToAccessWsAudit'),
+        content: t('upgrade.upgradeToAccessWsAuditSubtitle', {
+          plan: PlanTitles.ENTERPRISE,
+        }),
+        limitOrFeature: PlanFeatureTypes.FEATURE_AUDIT_WORKSPACE,
+      })
+    }
+
     if (tab === 'collaborators') loadCollaborators({} as any, props.workspaceId)
     router.push({ query: { ...route.value.query, tab } })
   },
@@ -68,6 +81,18 @@ onMounted(() => {
       await loadCollaborators({} as any, currentWorkspace.value!.id)
     })
 })
+
+watch(
+  () => route.value.query?.tab,
+  (newTab) => {
+    if (!isWsAuditEnabled.value && newTab === 'audits') {
+      tab.value = 'collaborators'
+    }
+  },
+  {
+    immediate: true,
+  },
+)
 </script>
 
 <template>
@@ -135,10 +160,33 @@ onMounted(() => {
               {{ $t('labels.members') }}
             </div>
           </template>
-          <div class="overflow-auto h-[calc(100vh-3rem)] nc-scrollbar-thin">
-            <PaymentBanner v-if="isFeatureEnabled(FEATURE_FLAG.PAYMENT)" class="mb-0" />
-            <WorkspaceCollaboratorsList class="h-[650px]" :workspace-id="currentWorkspace.id" />
-          </div>
+
+          <WorkspaceCollaboratorsList :workspace-id="currentWorkspace.id" />
+        </a-tab-pane>
+      </template>
+      <template v-if="isEeUI && !props.workspaceId && isPaymentEnabled && isUIAllowed('workspaceBilling')">
+        <a-tab-pane key="billing" class="w-full">
+          <template #tab>
+            <div class="tab-title" data-testid="nc-workspace-settings-tab-billing">
+              <GeneralIcon icon="ncDollarSign" class="flex-none h-4 w-4" />
+              {{ $t('general.billing') }}
+            </div>
+          </template>
+
+          <PaymentBillingPage />
+        </a-tab-pane>
+      </template>
+
+      <template v-if="isEeUI && !props.workspaceId && isPaymentEnabled && isUIAllowed('workspaceAuditList')">
+        <a-tab-pane key="audits" class="w-full">
+          <template #tab>
+            <div class="tab-title" data-testid="nc-workspace-settings-tab-audits">
+              <GeneralIcon icon="audit" class="h-4 w-4" />
+              {{ $t('title.audits') }}
+            </div>
+          </template>
+          <WorkspaceAudits v-if="isWsAuditEnabled" />
+          <div v-else>&nbsp;</div>
         </a-tab-pane>
       </template>
 
@@ -150,20 +198,8 @@ onMounted(() => {
               {{ $t('labels.settings') }}
             </div>
           </template>
+
           <WorkspaceSettings :workspace-id="currentWorkspace.id" />
-        </a-tab-pane>
-      </template>
-
-      <template v-if="isEeUI && !props.workspaceId && isFeatureEnabled(FEATURE_FLAG.PAYMENT)">
-        <a-tab-pane key="billing" class="w-full">
-          <template #tab>
-            <div class="tab-title" data-testid="nc-workspace-settings-tab-billing">
-              <GeneralIcon icon="ncDollarSign" class="flex-none h-4 w-4" />
-              {{ $t('general.billing') }}
-            </div>
-          </template>
-
-          <PaymentBillingPage class="!h-[calc(100vh_-_92px)]" />
         </a-tab-pane>
       </template>
     </NcTabs>
