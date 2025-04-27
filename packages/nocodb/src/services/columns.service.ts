@@ -181,6 +181,16 @@ async function getJunctionTableName(
   return `${tableName}${suffix ?? ''}`;
 }
 
+// todo: move to swagger.json/types
+export interface CustomLinkProps {
+  column_id: string;
+  ref_model_id: string;
+  ref_column_id: string;
+  junc_model_id: string;
+  junc_column_id: string;
+  junc_ref_column_id: string;
+}
+
 @Injectable()
 export class ColumnsService implements IColumnsService {
   constructor(
@@ -303,6 +313,14 @@ export class ColumnsService implements IColumnsService {
         id: column.fk_model_id,
       }),
     );
+
+    if (table.synced && column.readonly) {
+      NcError.badRequest(
+        `The column '${
+          column.title || column.column_name
+        }' is a synced column and cannot be updated.`,
+      );
+    }
 
     const source = await reuseOrSave('source', reuse, async () =>
       Source.get(context, table.source_id),
@@ -1851,6 +1869,53 @@ export class ColumnsService implements IColumnsService {
       for (const col of calendarRanges ?? []) {
         await CalendarRange.delete(col.id, context);
       }
+    } else if (
+      [
+        UITypes.Date,
+        UITypes.DateTime,
+        UITypes.CreatedTime,
+        UITypes.LastModifiedTime,
+      ].includes(colBody.uidt)
+    ) {
+      const calendarRanges = await CalendarRange.IsColumnBeingUsedAsRange(
+        context,
+        column.id,
+      );
+
+      for (const range of calendarRanges ?? []) {
+        if (range.fk_from_column_id === column.id && range.fk_to_column_id) {
+          const endColumn = await Column.get(context, {
+            colId: range.fk_to_column_id,
+          });
+
+          const uidtMatches = endColumn && endColumn.uidt === colBody.uidt;
+          const timezoneMatches =
+            !colBody.meta?.timezone ||
+            !endColumn?.meta?.timezone ||
+            colBody.meta.timezone === endColumn.meta.timezone;
+
+          if (!uidtMatches || !timezoneMatches) {
+            await CalendarRange.delete(range.id, context);
+          }
+        } else if (
+          range.fk_to_column_id === column.id &&
+          range.fk_from_column_id
+        ) {
+          const startColumn = await Column.get(context, {
+            colId: range.fk_from_column_id,
+          });
+
+          const uidtMatches = startColumn && startColumn.uidt === colBody.uidt;
+          const timezoneMatches =
+            !colBody.meta?.timezone ||
+            !startColumn?.meta?.timezone ||
+            colBody.meta.timezone === startColumn.meta.timezone;
+
+          if (!uidtMatches || !timezoneMatches) {
+            await CalendarRange.delete(range.id, context);
+          }
+        }
+      }
     }
 
     if (
@@ -2693,6 +2758,14 @@ export class ColumnsService implements IColumnsService {
       NcError.sourceMetaReadOnly(source.alias);
     }
 
+    if (table.synced && column.readonly) {
+      NcError.badRequest(
+        `The column '${
+          column.title || column.column_name
+        }' is a synced column and cannot be deleted.`,
+      );
+    }
+
     const sqlMgr = await reuseOrSave('sqlMgr', reuse, async () =>
       ProjectMgrv2.getSqlMgr(context, { id: source.base_id }, ncMeta),
     );
@@ -3039,6 +3112,23 @@ export class ColumnsService implements IColumnsService {
                     }
                   }
                 }
+
+                if (custom) {
+                  // if custom then delete the relation index
+                  await this.deleteCustomLinkIndex(context, {
+                    ltarCustomProps: {
+                      column_id: relationColOpt.fk_child_column_id,
+                      ref_column_id: relationColOpt.fk_parent_column_id,
+                      ref_model_id: relationColOpt.fk_related_model_id,
+                      junc_column_id: relationColOpt.fk_mm_child_column_id,
+                      junc_model_id: relationColOpt.fk_mm_model_id,
+                      junc_ref_column_id: relationColOpt.fk_mm_parent_column_id,
+                    },
+                    reuse,
+                    isMm: relationColOpt.type === RelationTypes.MANY_TO_MANY,
+                    source,
+                  });
+                }
               }
               break;
           }
@@ -3274,7 +3364,6 @@ export class ColumnsService implements IColumnsService {
       });
     }
 
-    if (custom) return;
     if (!ignoreFkDelete && childColumn.uidt === UITypes.ForeignKey) {
       const cTable = await Model.getWithInfo(
         context,
@@ -3855,7 +3944,7 @@ export class ColumnsService implements IColumnsService {
           // todo: sanitize
           mm: true,
           columns: associateTableCols,
-          user_id: param.user.id,
+          user_id: param.user?.id,
         },
       );
 
@@ -4263,4 +4352,18 @@ export class ColumnsService implements IColumnsService {
   ) {
     // placeholder for post column update hook
   }
+
+  protected async deleteCustomLinkIndex(
+    _context: NcContext,
+    _: {
+      ltarCustomProps: CustomLinkProps;
+      isMm: boolean;
+      reuse?: ReusableParams;
+      source: Source;
+    },
+  ) {
+    // placeholder for delete custom link index
+  }
 }
+
+export { reuseOrSave };

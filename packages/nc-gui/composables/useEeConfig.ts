@@ -17,6 +17,8 @@ export const useEeConfig = createSharedComposable(() => {
 
   const gracePeriodDaysLeft = computed(() => Infinity)
 
+  const gracePeriodEndDate = computed(() => '')
+
   const isWsAuditEnabled = computed(() => false)
 
   const isAllowToAddExtension = computed(() => true)
@@ -28,6 +30,8 @@ export const useEeConfig = createSharedComposable(() => {
   const blockAddNewExternalSource = computed(() => false)
 
   const blockAddNewWebhook = computed(() => false)
+
+  const isTopBannerVisible = computed(() => false)
 
   const getLimit = (..._args: any[]) => {}
 
@@ -69,6 +73,8 @@ export const useEeConfig = createSharedComposable(() => {
 
   const showUpgradeToSeeMoreRecordsModal = (..._args: any[]) => {}
 
+  const showUpgradeToUploadWsImage = (..._args: any[]) => {}
+
   return {
     getLimit,
     getStatLimit,
@@ -103,6 +109,9 @@ export const useEeConfig = createSharedComposable(() => {
     showUpgradeToSeeMoreRecordsModal,
     navigateToPricing,
     navigateToCheckout,
-    isLoyaltyWorkspace
+    isLoyaltyWorkspace,
+    gracePeriodEndDate,
+    isTopBannerVisible,
+    showUpgradeToUploadWsImage,
   }
 })

@@ -27,7 +27,7 @@ const formatData = (
     limit?: number
     offset?: number
   },
-  path: Array<number>,
+  path: Array<number> = [],
 ) => {
   // If pageInfo exists, use it for calculation
   if (pageInfo?.page && pageInfo?.pageSize) {
@@ -39,7 +39,7 @@ const formatData = (
         rowMeta: {
           rowIndex,
           isLastRow: rowIndex === pageInfo.totalRows! - 1,
-          path: path ?? [],
+          path,
         },
       }
     })
@@ -52,6 +52,7 @@ const formatData = (
     oldRow: { ...row },
     rowMeta: {
       rowIndex: offset + index,
+      path,
     },
   }))
 }
@@ -67,7 +68,7 @@ export function useInfiniteData(args: {
       fields?: Array<{ title: string; aggregation?: string | undefined }>
       path: Array<number>
     }) => void
-    findGroupByPath?: (path?: Array<number>) => CanvasGroup | undefined
+    findGroupByPath?: (path?: Array<number>) => CanvasGroup | null
   }
   where?: ComputedRef<string | undefined>
   disableSmartsheet?: boolean

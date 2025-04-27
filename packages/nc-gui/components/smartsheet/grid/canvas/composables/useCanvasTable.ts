@@ -251,9 +251,7 @@ export function useCanvasTable({
 
   const isFieldEditAllowed = computed(() => isUIAllowed('fieldAdd'))
 
-  const isRowDraggingEnabled = computed(
-    () => !selectedRows.value.length && isOrderColumnExists.value && !isRowReorderDisabled.value && !vSelectedAllRecords.value,
-  )
+  const isRowDraggingEnabled = computed(() => isOrderColumnExists.value && !isRowReorderDisabled.value)
 
   const isAddingEmptyRowAllowed = computed(
     () => isDataEditAllowed.value && !isSqlView.value && !isPublicView.value && !meta.value?.synced,
@@ -314,12 +312,33 @@ export function useCanvasTable({
           f.extra = getUserColOptions(f, baseUsers.value)
         }
 
+        if ([UITypes.DateTime].includes(f.uidt)) {
+          const meta = parseProp(f.meta)
+          f.extra.timezone = isEeUI ? getTimeZoneFromName(meta?.timezone) : undefined
+          f.extra.isDisplayTimezone = isEeUI ? meta?.isDisplayTimezone : undefined
+        }
+        if ([UITypes.Formula].includes(f.uidt)) {
+          if ([UITypes.DateTime].includes((f.meta as any)?.display_type)) {
+            const displayColumnConfig = (f.meta as any)?.display_column_meta as any
+            if (displayColumnConfig.meta) {
+              const displayColumnConfigMeta = displayColumnConfig.meta
+
+              const extra = {
+                timezone:
+                  isEeUI && displayColumnConfigMeta.isDisplayTimezone
+                    ? getTimeZoneFromName(displayColumnConfigMeta.timezone)
+                    : undefined,
+              }
+              displayColumnConfig.extra = extra
+            }
+          }
+        }
+
         const isInvalid = isColumnInvalid(
           f,
           aiIntegrations.value,
           isPublicView.value || !isDataEditAllowed.value || isSqlView.value,
         )
-
         const sqlUi = sqlUis.value[f.source_id] ?? Object.values(sqlUis.value)[0]
 
         return {
@@ -861,7 +880,6 @@ export function useCanvasTable({
     columns,
     colSlice,
     scrollLeft,
-    setCursor,
     (columnId, width) =>
       handleColumnWidth(columnId, width, (normalizedWidth) => (gridViewCols.value[columnId]!.width = normalizedWidth)),
     (columnId, width) =>
@@ -1281,5 +1299,6 @@ export function useCanvasTable({
     isContextMenuAllowed,
     removeInlineAddRecord,
     upgradeModalInlineState,
+    isRowDraggingEnabled,
   }
 }
