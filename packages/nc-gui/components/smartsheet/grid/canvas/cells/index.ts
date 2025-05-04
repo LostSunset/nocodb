@@ -63,6 +63,7 @@ export function useGridCellHandler(params: {
 
   const { t } = useI18n()
   const { metas } = useMetas()
+  const { user } = useGlobal()
   const canvasCellEvents = reactive<CanvasCellEventDataInjType>({})
   provide(CanvasCellEventDataInj, canvasCellEvents)
 
@@ -80,6 +81,7 @@ export function useGridCellHandler(params: {
   const baseUsers = computed<(Partial<UserType> | Partial<User>)[]>(() =>
     params.meta?.value?.base_id ? basesUser.value.get(params.meta?.value.base_id) || [] : [],
   )
+
   const actionManager = params.actionManager
   const makeCellEditable = params.makeCellEditable
   const setCursor = params.setCursor
@@ -138,6 +140,7 @@ export function useGridCellHandler(params: {
 
     return cellRenderStoreMap.get(key)!
   }
+
   const renderCell = (
     ctx: CanvasRenderingContext2D,
     column: ColumnType,
@@ -275,17 +278,21 @@ export function useGridCellHandler(params: {
         setCursor,
         cellRenderStore,
         baseUsers: baseUsers.value,
+        user: user.value,
         isUnderLookup,
         isPublic: isPublic.value,
         path,
         fontFamily,
+        isRowHovered,
+        isRowChecked,
+        rowMeta,
       })
     } else {
       return renderSingleLineText(ctx, {
         x: x + padding,
         y,
         text: value?.toString() ?? '',
-        fontFamily: `${pv ? 600 : 500} 13px Manrope`,
+        fontFamily: `${pv ? 600 : 500} 13px Inter`,
         fillStyle: pv ? '#3366FF' : textColor,
         height,
         py: padding,
@@ -372,6 +379,7 @@ export function useGridCellHandler(params: {
     pk: any
     selected: boolean
     imageLoader: ImageWindowLoader
+    path: Array<number>
   }) => {
     if (!ctx.column?.columnObj?.uidt) return
 
@@ -388,6 +396,8 @@ export function useGridCellHandler(params: {
         actionManager,
         makeCellEditable,
         setCursor,
+        path: ctx.path ?? [],
+        baseUsers: baseUsers.value,
       })
     }
   }

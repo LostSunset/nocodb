@@ -427,6 +427,7 @@ interface CellRendererOptions {
   setCursor: SetCursorType
   cellRenderStore: CellRenderStore
   baseUsers?: (Partial<UserType> | Partial<User>)[]
+  user?: Partial<UserType> | Partial<User>
   formula?: boolean
   isPublic?: boolean
   path?: Array<number>
@@ -527,6 +528,7 @@ interface CellRenderer {
     isPublic?: boolean
     openDetachedExpandedForm: (props: UseExpandedFormDetachedProps) => void
     openDetachedLongText: (props: UseDetachedLongTextProps) => void
+    formula?: boolean
   }) => Promise<boolean>
   handleKeyDown?: (options: {
     e: KeyboardEvent
@@ -572,6 +574,7 @@ interface CellRenderer {
     cellRenderStore: CellRenderStore
     setCursor: SetCursorType
     path: Array<number>
+    baseUsers?: (Partial<UserType> | Partial<User>)[]
   }) => Promise<void>
   [key: string]: any
 }
@@ -659,6 +662,13 @@ interface CanvasGroup {
   aggregations: Record<string, any>
 }
 
+interface CloudFeaturesType {
+  'Id'?: number
+  'Title'?: string
+  'Highlight'?: boolean
+  'Coming Soon'?: boolean
+}
+
 export type {
   User,
   ProjectMetaInfo,
@@ -709,4 +719,5 @@ export type {
   CursorType,
   CanvasCellEventDataInjType,
   CanvasGroup,
+  CloudFeaturesType,
 }

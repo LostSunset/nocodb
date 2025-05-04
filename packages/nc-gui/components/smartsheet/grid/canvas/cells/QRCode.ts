@@ -1,7 +1,7 @@
-import { renderMultiLineText } from '../utils/canvas'
+import { isBoxHovered, renderMultiLineText } from '../utils/canvas'
 
 export const QRCodeCellRenderer: CellRenderer = {
-  render: (ctx, { value, x, y, width, height, column, imageLoader, padding, tag = {} }) => {
+  render: (ctx, { value, x, y, width, height, column, imageLoader, padding, tag = {}, cellRenderStore }) => {
     const { renderAsTag } = tag
     padding = 4
     if (!value || value === 'ERR!') {
@@ -11,7 +11,7 @@ export const QRCodeCellRenderer: CellRenderer = {
           y,
           text: 'ERR!',
           maxWidth: width - padding * 2,
-          fontFamily: '500 13px Manrope',
+          fontFamily: '500 13px Inter',
           fillStyle: '#e65100',
           height,
         })
@@ -26,9 +26,9 @@ export const QRCodeCellRenderer: CellRenderer = {
       renderMultiLineText(ctx, {
         x: x + padding,
         y,
-        text: 'QR Code value too long!',
+        text: 'Too many characters for a QR Code',
         maxWidth: width - padding * 2,
-        fontFamily: '500 13px Manrope',
+        fontFamily: '500 13px Inter',
         fillStyle: '#e65100',
         height,
       })
@@ -57,6 +57,15 @@ export const QRCodeCellRenderer: CellRenderer = {
       const yPos = y + (height - size) / 2
       imageLoader.renderQRCode(ctx, qrCanvas, xPos, yPos, size)
 
+      if (!renderAsTag) {
+        Object.assign(cellRenderStore, {
+          x: xPos,
+          y: yPos,
+          width: size,
+          height: size,
+        })
+      }
+
       return {
         x: x + padding + size,
         y: yPos * 2,
@@ -75,6 +84,22 @@ export const QRCodeCellRenderer: CellRenderer = {
 
     if (e.key === 'Enter') {
       makeCellEditable(row, column)
+      return true
+    }
+
+    return false
+  },
+
+  async handleClick({ row, column, mousePosition, makeCellEditable, cellRenderStore, selected, isDoubleClick }) {
+    if (!selected || isDoubleClick) return false
+
+    const { x, y, width, height } = cellRenderStore
+
+    if (!x || !y || !width || !height) return false
+
+    if (isBoxHovered({ x, y, width, height }, mousePosition)) {
+      makeCellEditable(row, column)
+
       return true
     }
 
