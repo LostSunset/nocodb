@@ -187,6 +187,9 @@ export type FilterCreateUpdateV3Type = FilterV3Type | FilterGroupV3Type;
 export type FieldV3Type = FieldBaseV3Type &
   (
     | {
+        type?: 'SingleLineText';
+      }
+    | {
         type?: 'LongText';
         options?: FieldOptionsLongTextV3Type;
       }
@@ -2904,6 +2907,30 @@ export interface KanbanUpdateReqType {
   fk_cover_image_col_id?: StringOrNullType;
   /** Meta Info */
   meta?: MetaType;
+}
+
+/**
+ * Model for MCP Token
+ */
+export interface MCPTokenType {
+  /** Unique ID */
+  id?: string;
+  /** Title of the MCP Token */
+  title?: string;
+  /** Order of the Script */
+  order?: number;
+  /** MCP Token */
+  token?: string;
+  /** Workspace ID */
+  fk_workspace_id?: IdType;
+  /** Base ID */
+  base_id?: IdType;
+  /** User ID of the creator */
+  fk_user_id?: IdType;
+  /** Last updated time */
+  updated_at?: string;
+  /** Creation time */
+  created_at?: string;
 }
 
 /**
@@ -10765,6 +10792,8 @@ export class Api<
       viewName: string,
       query: {
         from_date: string;
+        prev_date: string;
+        next_date: string;
         to_date: string;
         fields?: any[];
         sort?: any[];
@@ -10795,6 +10824,8 @@ export class Api<
       query: {
         from_date: string;
         to_date: string;
+        prev_date: string;
+        next_date: string;
         fields?: any[];
         sort?: any[];
         where?: string;
@@ -10869,6 +10900,8 @@ export class Api<
       query: {
         from_date: string;
         to_date: string;
+        prev_date: string;
+        next_date: string;
         sort?: any[];
         where?: string;
         /** @min 1 */
@@ -10911,6 +10944,8 @@ export class Api<
       sharedViewUuid: string,
       query: {
         from_date: string;
+        prev_date: string;
+        next_date: string;
         to_date: string;
         sort?: any[];
         where?: string;

@@ -7,6 +7,8 @@ const props = defineProps<{
   tab?: string
 }>()
 
+const { hideSidebar, isNewSidebarEnabled } = storeToRefs(useSidebarStore())
+
 const { integrations } = useProvideIntegrationViewStore()
 
 const basesStore = useBases()
@@ -129,6 +131,10 @@ onMounted(async () => {
     projectPageTab.value = props.tab
   }
 })
+
+onMounted(() => {
+  hideSidebar.value = false
+})
 </script>
 
 <template>
@@ -151,7 +157,7 @@ onMounted(async () => {
         </div>
       </div>
 
-      <SmartsheetTopbarCmdK v-if="!isSharedBase" />
+      <SmartsheetTopbarCmdK v-if="!isSharedBase && !isNewSidebarEnabled" />
 
       <LazyGeneralShareProject />
     </div>
@@ -189,7 +195,7 @@ onMounted(async () => {
         >
           <template #tab>
             <div class="tab-title" data-testid="proj-view-tab__all-tables">
-              <NcLayout />
+              <GeneralIcon icon="ncScript" />
               <div>{{ $t('labels.allScripts') }}</div>
               <div
                 class="tab-info"
@@ -245,7 +251,7 @@ onMounted(async () => {
           </template>
           <DashboardSettingsDataSources v-model:state="baseSettingsState" :base-id="base.id" class="max-h-full" />
         </a-tab-pane>
-        <a-tab-pane v-if="isUIAllowed('baseMiscSettings')" key="base-settings">
+        <a-tab-pane key="base-settings">
           <template #tab>
             <div class="tab-title" data-testid="proj-view-tab__base-settings">
               <GeneralIcon icon="ncSettings" />
