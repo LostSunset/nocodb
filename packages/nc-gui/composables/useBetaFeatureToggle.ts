@@ -24,7 +24,8 @@ const FEATURES = [
     id: 'improved_sidebar',
     title: 'Improved Sidebar',
     description: 'New and Improved sidebar for better UI experience',
-    enabled: !ncIsPlaywright(),
+    enabled: false,
+    isEngineering: true,
   },
   {
     id: 'link_to_another_record',
@@ -142,6 +143,20 @@ const FEATURES = [
     description: 'Community/AI Translated',
     enabled: false,
     isEngineering: true,
+    isEE: true,
+  },
+  {
+    id: 'cross_base_link',
+    title: 'Cross Base Link',
+    description: 'Enables link creation between tables in different bases.',
+    enabled: false,
+    isEE: true,
+  },
+  {
+    id: 'custom_link',
+    title: 'Custom Link',
+    description: 'Allows user to create custom links using existing fields.',
+    enabled: false,
     isEE: true,
   },
 ] as const

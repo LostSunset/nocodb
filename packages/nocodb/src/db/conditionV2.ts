@@ -12,6 +12,8 @@ import type { FilterType } from 'nocodb-sdk';
 // import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 import type { Knex } from 'knex';
 import type { IBaseModelSqlV2 } from '~/db/IBaseModelSqlV2';
+import { replaceDelimitedWithKeyValuePg } from '~/db/aggregations/pg';
+import { replaceDelimitedWithKeyValueSqlite3 } from '~/db/aggregations/sqlite3';
 import generateLookupSelectQuery from '~/db/generateLookupSelectQuery';
 import { getRefColumnIfAlias } from '~/helpers';
 import { NcError } from '~/helpers/catchError';
@@ -21,6 +23,7 @@ import { type BarcodeColumn, BaseUser, type QrCodeColumn } from '~/models';
 import Filter from '~/models/Filter';
 import { getAliasGenerator } from '~/utils';
 import { validateAndStringifyJson } from '~/utils/tsUtils';
+import { handleCurrentUserFilter } from '~/helpers/conditionHelpers';
 
 // tod: tobe fixed
 // extend(customParseFormat);
@@ -243,14 +246,36 @@ const parseConditionV2 = async (
             .includes(filterVal.toLowerCase());
         });
 
+        let finalStatement = '';
+
         // create nested replace statement for each user
-        const finalStatement = users.reduce((acc, user) => {
-          const qb = knex.raw(`REPLACE(${acc}, ?, ?)`, [
-            user.id,
-            user.display_name || user.email,
-          ]);
-          return qb.toQuery();
-        }, knex.raw(`??`, [column.column_name]).toQuery());
+        if (knex.clientType() === 'pg') {
+          finalStatement = `(${replaceDelimitedWithKeyValuePg({
+            knex,
+            needleColumn: column.column_name,
+            stack: users.map((user) => ({
+              key: user.id,
+              value: user.display_name || user.email,
+            })),
+          })})`;
+        } else if (knex.clientType() === 'sqlite3') {
+          finalStatement = `(${replaceDelimitedWithKeyValueSqlite3({
+            knex,
+            needleColumn: column.column_name,
+            stack: users.map((user) => ({
+              key: user.id,
+              value: user.display_name || user.email,
+            })),
+          })})`;
+        } else {
+          finalStatement = users.reduce((acc, user) => {
+            const qb = knex.raw(`REPLACE(${acc}, ?, ?)`, [
+              user.id,
+              user.display_name || user.email,
+            ]);
+            return qb.toQuery();
+          }, knex.raw(`??`, [column.column_name]).toQuery());
+        }
 
         let val = filter.value;
         if (filter.comparison_op === 'like') {
@@ -299,14 +324,25 @@ const parseConditionV2 = async (
         filter.comparison_op === 'notempty'
       )
         filter.value = '';
-      const _field = sanitize(
+      let _field = sanitize(
         customWhereClause
           ? filter.value
           : alias
           ? `${alias}.${column.column_name}`
           : column.column_name,
       );
-      const _val = customWhereClause ? customWhereClause : filter.value;
+      let _val = customWhereClause ? customWhereClause : filter.value;
+      handleCurrentUserFilter(context, {
+        column,
+        filter,
+        setVal: (val) => {
+          if (customWhereClause) {
+            _field = val;
+          } else {
+            _val = val;
+          }
+        },
+      });
 
       // get column name for CreateTime, LastModifiedTime
       column.column_name = await getColumnName(context, column);

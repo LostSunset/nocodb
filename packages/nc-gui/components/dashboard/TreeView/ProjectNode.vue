@@ -64,8 +64,6 @@ const { activeTable } = storeToRefs(useTablesStore())
 
 const { isUIAllowed } = useRoles()
 
-useTabs()
-
 const { meta: metaKey, control } = useMagicKeys()
 
 const { refreshCommandPalette } = useCommandPalette()
@@ -154,7 +152,6 @@ const enableEditModeForSource = (sourceId: string) => {
     if (!input) return
     input?.focus()
     input?.select()
-    // input?.scrollIntoView()
   })
 }
 
@@ -278,7 +275,7 @@ function openTableCreateDialog(sourceIndex?: number | undefined) {
 
   const { close } = useDialog(resolveComponent('DlgTableCreate'), {
     'modelValue': isOpen,
-    sourceId, // || sources.value[0].id,
+    sourceId,
     'baseId': base.value!.id,
     'onCreate': closeDialog,
     'onUpdate:modelValue': () => closeDialog(),
@@ -315,7 +312,7 @@ async function addNewProjectChildEntity() {
   isAddNewProjectChildEntityLoading.value = true
 
   const isProjectPopulated = basesStore.isProjectPopulated(base.value.id!)
-  if (!isProjectPopulated && base.value.type === NcProjectType.DB) {
+  if (!isProjectPopulated) {
     // We do not wait for tables api, so that add new table is seamless.
     // Only con would be while saving table duplicate table name FE validation might not work
     // If the table list api takes time to load before the table name validation
@@ -324,10 +321,6 @@ async function addNewProjectChildEntity() {
 
   try {
     openTableCreateDialog()
-
-    if (!base.value.isExpanded && base.value.type !== NcProjectType.DB) {
-      base.value.isExpanded = true
-    }
   } finally {
     isAddNewProjectChildEntityLoading.value = false
   }
@@ -769,7 +762,7 @@ defineExpose({
               </div>
             </div>
 
-            <div v-if="base?.sources?.slice(1).filter((el) => el.enabled)?.length" class="transition-height duration-200">
+            <div v-if="base?.sources?.slice(1).some((el) => el.enabled)" class="transition-height duration-200">
               <div class="border-none sortable-list">
                 <div v-for="(source, sourceIndex) of base.sources" :key="`source-${source.id}`">
                   <template v-if="sourceIndex === 0"></template>

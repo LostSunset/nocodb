@@ -389,6 +389,18 @@ export function extractDBError(error): {
             table: extractTableNameMatch[1],
           };
         }
+
+        const extractColumnNameMatch = error.message.match(
+          / column "(\w+)" does not exist/i,
+        );
+
+        if (extractColumnNameMatch && extractColumnNameMatch[1]) {
+          message = `The column '${extractColumnNameMatch[1]}' does not exist.`;
+          _type = DBError.COLUMN_NOT_EXIST;
+          _extra = {
+            table: extractColumnNameMatch[1],
+          };
+        }
       }
       break;
     case '42703':
@@ -1107,14 +1119,20 @@ export class NcError {
   }
 
   static invalidValueForField(
-    payload: string | { value: string; column: string; type: UITypes },
+    payload:
+      | string
+      | { value: string; column: string; type: UITypes; reason?: string },
     args?: NcErrorArgs,
   ): never {
+    const withReason =
+      typeof payload === 'object' && payload.reason
+        ? `, reason: ${payload.reason}`
+        : ``;
     throw new NcBaseErrorv2(NcErrorType.INVALID_VALUE_FOR_FIELD, {
       params:
         typeof payload === 'string'
           ? payload
-          : `Invalid value '${payload.value}' for type '${payload.type}' on column '${payload.column}'`,
+          : `Invalid value '${payload.value}' for type '${payload.type}' on column '${payload.column}'${withReason}`,
       ...args,
     });
   }

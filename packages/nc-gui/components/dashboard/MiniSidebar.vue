@@ -52,13 +52,7 @@ const navigateToProjectPage = () => {
 const navigateToSettings = () => {
   const cmdOrCtrl = isMac() ? metaKey.value : control.value
 
-  // TODO: Handle cloud case properly
   navigateToWorkspaceSettings('', cmdOrCtrl)
-
-  // if (appInfo.value.baseHostName) {
-  //   window.location.href = `https://app.${appInfo.value.baseHostName}/dashboard`
-  // } else {
-  // }
 }
 
 const navigateToIntegrations = () => {
@@ -86,6 +80,7 @@ useEventListener(document, 'keydown', async (e: KeyboardEvent) => {
 
   switch (e.code) {
     case 'KeyB': {
+      e.preventDefault()
       navigateToProjectPage()
       break
     }

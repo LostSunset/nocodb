@@ -12,10 +12,21 @@ const emits = defineEmits<{
 
 const vModel = useVModel(props, 'value', emits)
 
+const { isLoading } = toRefs(props)
+
+const { t } = useI18n()
+
 const inputRef = ref()
+
+const placeholder = computed(() => {
+  return isLoading.value
+    ? `${t('general.search')}...`
+    : `${t('activity.searchProject').charAt(0).toUpperCase()}${t('activity.searchProject').slice(1).toLowerCase()}`
+})
 
 const onKeydown = (e: KeyboardEvent) => {
   if (e.altKey && e.code === 'KeyB') {
+    e.preventDefault()
     inputRef.value.input?.blur()
   } else {
     e.stopPropagation()
@@ -29,11 +40,7 @@ const onKeydown = (e: KeyboardEvent) => {
     v-model:value="vModel"
     type="text"
     class="nc-base-search-input nc-input-border-on-value nc-input-shadow !h-8 !px-2.5 !py-1 !rounded-lg"
-    :placeholder="
-      isLoading
-        ? 'Search...'
-        : `${$t('activity.searchProject').charAt(0).toUpperCase()}${$t('activity.searchProject').slice(1).toLowerCase()}`
-    "
+    :placeholder="placeholder"
     allow-clear
     :readonly="isLoading"
     @keydown="onKeydown"

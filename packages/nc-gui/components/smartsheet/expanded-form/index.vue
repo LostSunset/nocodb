@@ -120,6 +120,7 @@ const {
   loadComments,
   loadAudits,
   clearColumns,
+  baseRoles,
 } = expandedFormStore
 
 const loadingEmit = (event: 'update:modelValue' | 'cancel' | 'next' | 'prev' | 'createdRecord') => {
@@ -269,7 +270,7 @@ const isExpanded = useVModel(props, 'modelValue', emits, {
 })
 
 const onClose = () => {
-  if (!isUIAllowed('dataEdit')) {
+  if (!isUIAllowed('dataEdit', baseRoles.value)) {
     isExpanded.value = false
   } else if (changedColumns.value.size > 0) {
     isCloseModalOpen.value = true
@@ -630,7 +631,7 @@ const onIsExpandedUpdate = (v: boolean) => {
     if (isKanban.value) {
       emits('cancel')
     }
-  } else if (!v && isUIAllowed('dataEdit')) {
+  } else if (!v && isUIAllowed('dataEdit', baseRoles.value)) {
     preventModalStatus.value = true
   } else {
     isExpanded.value = v
@@ -732,7 +733,7 @@ export default {
     :closable="false"
     :footer="null"
     :visible="isExpanded"
-    :width="commentsDrawer && isUIAllowed('commentList') ? 'min(80vw,1280px)' : 'min(70vw,768px)'"
+    :width="commentsDrawer && isUIAllowed('commentList', baseRoles) ? 'min(80vw,1280px)' : 'min(70vw,768px)'"
     class="nc-drawer-expanded-form"
     :size="isMobileMode ? 'medium' : 'small'"
     v-bind="modalProps"
@@ -795,13 +796,7 @@ export default {
               class="flex items-center font-bold text-gray-800 text-2xl overflow-hidden"
             >
               <span class="min-w-[120px] md:min-w-[300px]">
-                <NcTooltip class="truncate" show-on-truncate-only>
-                  <template #title>
-                    {{ displayValue }}
-                  </template>
-
-                  <LazySmartsheetPlainCell v-model="displayValue" :column="displayField" />
-                </NcTooltip>
+                <LazySmartsheetPlainCell v-model="displayValue" :column="displayField" show-tooltip />
               </span>
             </div>
           </div>
@@ -810,7 +805,7 @@ export default {
           <SmartsheetExpandedFormViewModeSelector v-model="activeViewMode" view="view" class="nc-expanded-form-mode-switch" />
         </div>
         <div class="flex gap-2">
-          <NcTooltip v-if="!isMobileMode && isUIAllowed('dataEdit') && !isSqlView">
+          <NcTooltip v-if="!isMobileMode && isUIAllowed('dataEdit', baseRoles) && !isSqlView">
             <template #title> {{ renderAltOrOptlKey() }} + S</template>
             <NcButton
               v-e="['c:row-expand:save']"
@@ -871,7 +866,7 @@ export default {
                     {{ $t('labels.copyRecordURL') }}
                   </div>
                 </NcMenuItem>
-                <NcMenuItem v-if="isUIAllowed('dataEdit') && !isSqlView" @click="!isNew ? onDuplicateRow() : () => {}">
+                <NcMenuItem v-if="isUIAllowed('dataEdit', baseRoles) && !isSqlView" @click="!isNew ? onDuplicateRow() : () => {}">
                   <div v-e="['c:row-expand:duplicate']" class="flex gap-2 items-center" data-testid="nc-expanded-form-duplicate">
                     <component :is="iconMap.duplicate" class="cursor-pointer nc-duplicate-row" />
                     <span class="-ml-0.25">
@@ -879,9 +874,15 @@ export default {
                     </span>
                   </div>
                 </NcMenuItem>
-                <NcDivider v-if="isUIAllowed('dataEdit') && !isSqlView" />
+                <NcDivider
+                  v-if="
+                    isUIAllowed('dataEdit', {
+                      roles: baseRoles,
+                    }) && !isSqlView
+                  "
+                />
                 <NcMenuItem
-                  v-if="isUIAllowed('dataEdit') && !isSqlView"
+                  v-if="isUIAllowed('dataEdit', baseRoles) && !isSqlView"
                   class="!text-red-500 !hover:bg-red-50"
                   @click="!isNew && onDeleteRowClick()"
                 >
