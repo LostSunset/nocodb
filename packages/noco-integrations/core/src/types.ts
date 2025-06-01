@@ -1,9 +1,11 @@
 import {
   FormBuilderElement,
   FormBuilderInputType,
+  FormBuilderValidatorType,
   FormDefinition,
   IntegrationsType as IntegrationType,
   SyncCategory,
+  UITypes,
 } from 'nocodb-sdk';
 import type { IntegrationWrapper } from './integration';
 
@@ -32,5 +34,8 @@ export {
   FormDefinition,
   FormBuilderElement,
   FormBuilderInputType,
+  FormBuilderValidatorType,
   IntegrationType,
+  SyncCategory,
+  UITypes,
 };
