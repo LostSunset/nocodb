@@ -19,7 +19,7 @@ const [useProvideSmartsheetStore, useSmartsheetStore] = useInjectionState(
     const router = useRouter()
     const route = router.currentRoute
 
-    const { user } = useGlobal()
+    const { user, isMobileMode } = useGlobal()
 
     const { activeView: view, activeNestedFilters, activeSorts } = storeToRefs(useViewsStore())
 
@@ -49,6 +49,7 @@ const [useProvideSmartsheetStore, useSmartsheetStore] = useInjectionState(
     const isMap = computed(() => view.value?.type === ViewTypes.MAP)
     const isSharedForm = computed(() => isForm.value && shared)
     const isDefaultView = computed(() => view.value?.is_default)
+    const gridEditEnabled = ref(true)
 
     const isExternalSource = computed(
       () => !!base.value?.sources?.some((s) => s.id === (meta.value as TableType)?.source_id && !s.is_meta && !s.is_local),
@@ -87,6 +88,14 @@ const [useProvideSmartsheetStore, useSmartsheetStore] = useInjectionState(
       return route.value.query.where
     })
 
+    const totalRowsWithSearchQuery = ref(0)
+
+    const totalRowsWithoutSearchQuery = ref(0)
+
+    const fetchTotalRowsWithSearchQuery = computed(() => {
+      return search.value.query?.trim() && !isMobileMode.value && (isGrid.value || isGallery.value)
+    })
+
     const xWhere = computed(() => {
       let where
 
@@ -117,6 +126,9 @@ const [useProvideSmartsheetStore, useSmartsheetStore] = useInjectionState(
     const actionPaneSize = ref(40)
 
     const isSqlView = computed(() => (meta.value as TableType)?.type === 'view')
+
+    const isSyncedTable = computed(() => !!(meta.value as TableType)?.synced)
+
     const sorts = ref<SortType[]>(unref(initialSorts) ?? [])
     const nestedFilters = ref<FilterType[]>(unref(initialFilters) ?? [])
 
@@ -201,6 +213,11 @@ const [useProvideSmartsheetStore, useSmartsheetStore] = useInjectionState(
       filtersFromUrlParams,
       whereQueryFromUrl,
       validFiltersFromUrlParams,
+      isSyncedTable,
+      totalRowsWithSearchQuery,
+      totalRowsWithoutSearchQuery,
+      fetchTotalRowsWithSearchQuery,
+      gridEditEnabled,
     }
   },
   'smartsheet-store',

@@ -14,6 +14,7 @@ import type CustomKnex from '../CustomKnex';
 import type { NcContext } from 'nocodb-sdk';
 import type { IBaseModelSqlV2 } from '../IBaseModelSqlV2';
 import type {
+  FilterOperationResult,
   FilterOptions,
   FilterVerificationResult,
   IFieldHandler,
@@ -46,7 +47,6 @@ import { CheckboxSqliteHandler } from '~/db/field-handler/handlers/checkbox/chec
 import { LongTextGeneralHandler } from '~/db/field-handler/handlers/long-text/long-text.general.handler';
 import { SingleLineTextGeneralHandler } from '~/db/field-handler/handlers/single-line-text/single-line-text.general.handler';
 import { ComputedFieldHandler } from '~/db/field-handler/handlers/computed';
-import { DateTimeMsSQLHandler } from '~/db/field-handler/handlers/date-time/date-time.mssql.handler';
 import { DateTimeSQLiteHandler } from '~/db/field-handler/handlers/date-time/date-time.sqlite.handler';
 import { DateTimeMySQLHandler } from '~/db/field-handler/handlers/date-time/date-time.mysql.handler';
 import { DateTimePGHandler } from '~/db/field-handler/handlers/date-time/date-time.pg.handler';
@@ -167,7 +167,6 @@ const HANDLER_REGISTRY: Partial<
     [ClientType.PG]: DateTimePGHandler,
     [ClientType.MYSQL]: DateTimeMySQLHandler,
     [ClientType.SQLITE]: DateTimeSQLiteHandler,
-    [ClientType.MSSQL]: DateTimeMsSQLHandler,
   },
   [UITypes.CreatedTime]: {
     [CLIENT_DEFAULT]: ComputedFieldHandler,
@@ -268,7 +267,7 @@ export class FieldHandler implements IFieldHandler {
     filter: Filter,
     column?: Column,
     options: FilterOptions = {},
-  ): Promise<(qb: Knex.QueryBuilder) => void> {
+  ) {
     const knex = options.knex ?? this.info.knex;
     const dbClient = (knex.clientType?.() ??
       knex.client.config.client) as ClientType;
@@ -288,16 +287,13 @@ export class FieldHandler implements IFieldHandler {
     return this.applyFilters(filter.children, options);
   }
 
-  async applyFilters(
-    filters: Filter[],
-    options: FilterOptions = {},
-  ): Promise<(qb: Knex.QueryBuilder) => void> {
+  async applyFilters(filters: Filter[], options: FilterOptions = {}) {
     const model = options.baseModel?.model ?? this.info.baseModel.model;
     if (!model.columns) {
       await model.getColumns(options.context ?? this.info.context);
     }
     const qbHandlers: {
-      handler: (qb: Knex.QueryBuilder) => void;
+      handler: FilterOperationResult;
       index: number;
       logicalOps?: string;
     }[] = [];
@@ -326,10 +322,17 @@ export class FieldHandler implements IFieldHandler {
         });
       }
     }
-    return (qb: Knex.QueryBuilder) => {
-      for (const handler of qbHandlers.sort((a, b) => a.index - b.index)) {
-        qb[getLogicalOpMethod(handler.logicalOps)](qb);
-      }
+    return {
+      clause: (qb: Knex.QueryBuilder) => {
+        for (const handler of qbHandlers.sort((a, b) => a.index - b.index)) {
+          qb[getLogicalOpMethod(handler.logicalOps)](handler.handler.clause);
+        }
+      },
+      rootApply: (qb: Knex.QueryBuilder) => {
+        for (const handler of qbHandlers.sort((a, b) => a.index - b.index)) {
+          handler.handler.rootApply?.(qb);
+        }
+      },
     };
   }
 
@@ -412,7 +415,9 @@ export class FieldHandler implements IFieldHandler {
     const verificationResult = await this.verifyFiltersSafe(filters, options);
     if (!verificationResult.isValid) {
       if (this.info.context.api_version === NcApiVersion.V3) {
-        NcError.invalidFilterV3(verificationResult.errors.join(', '));
+        NcError.get(this.info.context).invalidFilter(
+          verificationResult.errors.join(', '),
+        );
       } else {
         throw new FilterVerificationError(verificationResult.errors!);
       }

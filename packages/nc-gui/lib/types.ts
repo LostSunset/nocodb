@@ -397,7 +397,6 @@ interface CellRendererOptions {
   tableMetaLoader: TableMetaLoader
   baseRoleLoader: BaseRoleLoader
   isMysql: (sourceId?: string) => boolean
-  isMssql: (sourceId?: string) => boolean
   isXcdbBase: (sourceId?: string) => boolean
   isPg: (sourceId?: string) => boolean
   t: Composer['t']
@@ -629,7 +628,6 @@ interface ParsePlainCellValueProps {
     metas: { [idOrTitle: string]: TableType | any }
     baseUsers?: Map<string, User[]>
     isMysql: (sourceId?: string) => boolean
-    isMssql: (sourceId?: string) => boolean
     isXcdbBase: (sourceId?: string) => boolean
     t: Composer['t']
     isUnderLookup?: boolean
@@ -675,6 +673,8 @@ interface CloudFeaturesType {
   'Highlight'?: boolean
   'Coming Soon'?: boolean
 }
+
+type CanvasScrollToCellFn = (row?: number, column?: number, path?: Array<number>, horizontalScroll?: boolean) => void
 
 export type {
   User,
@@ -727,4 +727,5 @@ export type {
   CanvasCellEventDataInjType,
   CanvasGroup,
   CloudFeaturesType,
+  CanvasScrollToCellFn,
 }

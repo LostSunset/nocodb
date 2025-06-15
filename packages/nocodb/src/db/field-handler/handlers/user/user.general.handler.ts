@@ -22,7 +22,7 @@ export class UserGeneralHandler extends GenericFieldHandler {
     filter: Filter,
     column: Column,
     options: FilterOptions,
-  ): Promise<(qb: Knex.QueryBuilder) => void> {
+  ) {
     const { alias, context } = options;
     let val = filter.value;
     const field =
@@ -256,13 +256,13 @@ export class UserGeneralHandler extends GenericFieldHandler {
 
     if (filter.comparison_op === 'like') {
       return this.singleLineTextHandler.filterLike(
-        { val, sourceField: finalStatement },
+        { val, sourceField: knex.raw(finalStatement) },
         rootArgs,
         options,
       );
     } else {
       return this.singleLineTextHandler.filterNlike(
-        { val, sourceField: finalStatement },
+        { val, sourceField: knex.raw(finalStatement) },
         rootArgs,
         options,
       );

@@ -225,6 +225,10 @@ const onCreatedRecord = async (record: any) => {
   isNewRecord.value = false
 }
 
+const onDeletedRecord = () => {
+  loadChildrenList(true)
+}
+
 const relation = computed(() => {
   return injectedColumn!.value?.colOptions?.type
 })
@@ -481,7 +485,12 @@ const handleKeyDown = (e: KeyboardEvent) => {
         <div class="flex items-center gap-2">
           <NcButton
             v-if="
-              !isPublic && !isDataReadOnly && isUIAllowed('dataEdit', externalBaseUserRoles) && isUIAllowed('dataEdit') && !isForm
+              !isPublic &&
+              !isDataReadOnly &&
+              isUIAllowed('dataEdit', externalBaseUserRoles) &&
+              isUIAllowed('dataEdit') &&
+              !isForm &&
+              !relatedTableMeta?.synced
             "
             v-e="['c:row-expand:open']"
             size="small"
@@ -551,6 +560,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
         maintain-default-view-order
         :new-record-submit-btn-text="!isNewRecord ? undefined : 'Create & Link'"
         @created-record="onCreatedRecord"
+        @deleted-record="onDeletedRecord"
       />
     </Suspense>
   </div>

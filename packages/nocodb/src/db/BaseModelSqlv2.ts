@@ -1804,8 +1804,6 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
       qb.orderByRaw('RAND()');
     } else if (this.isPg || this.isSqlite) {
       qb.orderByRaw('RANDOM()');
-    } else if (this.isMssql) {
-      qb.orderByRaw('NEWID()');
     }
   }
 
@@ -2129,15 +2127,8 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
 
   public getTnPath(tb: { table_name: string } | string, alias?: string) {
     const tn = typeof tb === 'string' ? tb : tb.table_name;
-    const schema = (this.dbDriver as any).searchPath?.();
     if (this.isPg && this.schema) {
       return `${this.schema}.${tn}${alias ? ` as ${alias}` : ``}`;
-    } else if (this.isMssql && schema) {
-      return this.dbDriver.raw(`??.??${alias ? ' as ??' : ''}`, [
-        schema,
-        tn,
-        ...(alias ? [alias] : []),
-      ]);
     } else if (this.isSnowflake) {
       return `${[
         this.dbDriver.client.config.connection.database,
@@ -2156,7 +2147,6 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
   public get clientMeta() {
     return {
       isSqlite: this.isSqlite,
-      isMssql: this.isMssql,
       isPg: this.isPg,
       isMySQL: this.isMySQL,
       // isSnowflake: this.isSnowflake,
@@ -2165,10 +2155,6 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
 
   get isSqlite() {
     return this.clientType === 'sqlite3';
-  }
-
-  get isMssql() {
-    return this.clientType === 'mssql';
   }
 
   get isPg() {
@@ -2253,7 +2239,7 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
       let response;
       const query = this.dbDriver(this.tnPath).insert(insertObj);
 
-      if ((this.isPg || this.isMssql) && this.model.primaryKey) {
+      if (this.isPg && this.model.primaryKey) {
         query.returning(
           `${this.model.primaryKey.column_name} as ${this.model.primaryKey.id}`,
         );
@@ -2575,7 +2561,7 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
           }
 
           responses =
-            !raw && (this.isPg || this.isMssql)
+            !raw && this.isPg
               ? await trx
                   .batchInsert(this.tnPath, toInsert, chunkSize)
                   .returning(
@@ -2811,7 +2797,7 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
 
   // Helper method to format date
   private formatDate(val: string): any {
-    const { isMySQL, isSqlite, isMssql, isPg } = this.clientMeta;
+    const { isMySQL, isSqlite, isPg } = this.clientMeta;
     if (val.indexOf('-') < 0 && val.indexOf('+') < 0 && val.slice(-1) !== 'Z') {
       // if no timezone is given,
       // then append +00:00 to make it as UTC
@@ -2844,14 +2830,6 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
       return this.dbDriver.raw(`? AT TIME ZONE CURRENT_SETTING('timezone')`, [
         dayjs(val).utc().format('YYYY-MM-DD HH:mm:ssZ'),
       ]);
-    } else if (isMssql) {
-      // convert ot UTC
-      // e.g. 2023-05-10T08:49:32.000Z -> 2023-05-10 08:49:32-08:00
-      // then convert to db timezone
-      return this.dbDriver.raw(
-        `SWITCHOFFSET(CONVERT(datetimeoffset, ?), DATENAME(TzOffset, SYSDATETIMEOFFSET()))`,
-        [dayjs(val).utc().format('YYYY-MM-DD HH:mm:ssZ')],
-      );
     } else {
       // e.g. 2023-01-01T12:00:00.000Z -> 2023-01-01 12:00:00+00:00
       return dayjs(val).utc().format('YYYY-MM-DD HH:mm:ssZ');
@@ -3712,7 +3690,10 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
     const { allowSystemColumn = false } = params || {};
 
     if (!allowSystemColumn && this.model.synced) {
-      NcError.badRequest('Cannot insert into synced table');
+      NcError._.prohibitedSyncTableOperation({
+        modelName: this.model.title,
+        operation: 'insert',
+      });
     }
 
     await this.handleHooks('before.insert', null, data, req);
@@ -3729,7 +3710,10 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
     const { allowSystemColumn = false } = params || {};
 
     if (!allowSystemColumn && this.model.synced) {
-      NcError.badRequest('Cannot insert into synced table');
+      NcError._.prohibitedSyncTableOperation({
+        modelName: this.model.title,
+        operation: 'insert',
+      });
     }
 
     await this.handleHooks('before.bulkInsert', null, data, req);
@@ -4158,7 +4142,10 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
 
   public async beforeDelete(data: any, _trx: any, req): Promise<void> {
     if (this.model.synced) {
-      NcError.badRequest('Cannot delete from synced table');
+      NcError._.prohibitedSyncTableOperation({
+        modelName: this.model.title,
+        operation: 'delete',
+      });
     }
 
     await this.handleHooks('before.delete', null, data, req);
@@ -4166,7 +4153,10 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
 
   public async beforeBulkDelete(_data: any, _trx: any, _req): Promise<void> {
     if (this.model.synced) {
-      NcError.badRequest('Cannot delete from synced table');
+      NcError._.prohibitedSyncTableOperation({
+        modelName: this.model.title,
+        operation: 'delete',
+      });
     }
   }
 
@@ -5132,7 +5122,7 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
 
     if (this.isPg || this.isSnowflake) {
       return (await trx.raw(query))?.rows;
-    } else if (!this.isMssql && /^(\(|)select/i.test(query)) {
+    } else if (/^(\(|)select/i.test(query)) {
       return await trx.from(trx.raw(query).wrap('(', ') __nc_alias'));
     } else if (this.isMySQL && /^(\(|)insert/i.test(query)) {
       const res = await trx.raw(query);
@@ -5238,7 +5228,7 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
 
   protected sanitizeQuery(query: string | string[]) {
     const fn = (q: string) => {
-      if (!this.isPg && !this.isMssql && !this.isSnowflake) {
+      if (!this.isPg && !this.isSnowflake) {
         return unsanitize(q);
       } else {
         return sanitize(q);
@@ -5866,8 +5856,6 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
         // remove milliseconds
         if (this.isMySQL) {
           d[col.id] = d[col.id].replace(/\.000000/g, '');
-        } else if (this.isMssql) {
-          d[col.id] = d[col.id].replace(/\.0000000 \+00:00/g, '');
         }
 
         if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g.test(d[col.id])) {
@@ -6736,11 +6724,7 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
   public now() {
     return dayjs()
       .utc()
-      .format(
-        this.isMySQL || this.isMssql
-          ? 'YYYY-MM-DD HH:mm:ss'
-          : 'YYYY-MM-DD HH:mm:ssZ',
-      );
+      .format(this.isMySQL ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD HH:mm:ssZ');
   }
 
   async getCustomConditionsAndApply(params: {
