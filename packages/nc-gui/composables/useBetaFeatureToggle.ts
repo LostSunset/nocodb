@@ -68,7 +68,7 @@ const FEATURES = [
   },
   {
     id: 'nocodb_scripts',
-    title: 'NocoDB Scripts (Beta)',
+    title: 'NocoDB Scripts',
     description: 'Enable NocoDB Scripts to automate repetitive workflow',
     enabled: false,
     version: 1,
@@ -130,7 +130,7 @@ const FEATURES = [
     title: 'Extensions',
     description: 'Extensions allows you to add new features or functionalities to the NocoDB platform.',
     enabled: ncIsPlaywright(),
-    version: 2,
+    version: 3,
     isEngineering: true,
   },
   {
@@ -207,6 +207,8 @@ export const useBetaFeatureToggle = createSharedComposable(() => {
   const { $e } = useNuxtApp()
 
   const isEngineeringModeOn = ref(false)
+
+  const isExperimentalFeatureModalOpen = ref(false)
 
   const saveFeatures = () => {
     try {
@@ -293,7 +295,6 @@ export const useBetaFeatureToggle = createSharedComposable(() => {
   }
 
   onMounted(() => {
-    initializeFeatures()
     window.addEventListener('storage', handleStorageEvent)
   })
 
@@ -306,5 +307,7 @@ export const useBetaFeatureToggle = createSharedComposable(() => {
     toggleFeature,
     isFeatureEnabled,
     isEngineeringModeOn,
+    isExperimentalFeatureModalOpen,
+    initializeFeatures,
   }
 })

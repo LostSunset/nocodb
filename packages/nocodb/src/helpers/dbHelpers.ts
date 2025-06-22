@@ -7,6 +7,7 @@ import {
   isVirtualCol,
   NcApiVersion,
   type NcContext,
+  ncIsNullOrUndefined,
   ncIsNumber,
   parseProp,
   RelationTypes,
@@ -138,17 +139,28 @@ export function _wherePk(
   return where;
 }
 
-export function getCompositePkValue(primaryKeys: Column[], row) {
+export function getCompositePkValue(
+  primaryKeys: Column[],
+  row,
+  option?: {
+    skipSubstitutingColumnIds?: boolean;
+  },
+) {
   if (row === null || row === undefined) {
-    NcError.requiredFieldMissing(primaryKeys.map((c) => c.title).join(','));
+    NcError.requiredFieldMissing(
+      primaryKeys
+        .map((c) => (option?.skipSubstitutingColumnIds ? c.id : c.title))
+        .join(','),
+    );
   }
 
   if (typeof row !== 'object') return row;
 
+  const pkIdOrTitleKey = option?.skipSubstitutingColumnIds ? 'id' : 'title';
   if (primaryKeys.length > 1) {
     return primaryKeys
       .map((c) =>
-        (row[c.title] ?? row[c.column_name])
+        (row[c[pkIdOrTitleKey]] ?? row[c.column_name])
           ?.toString?.()
           .replaceAll('_', '\\_'),
       )
@@ -157,7 +169,7 @@ export function getCompositePkValue(primaryKeys: Column[], row) {
 
   return (
     primaryKeys[0] &&
-    (row[primaryKeys[0].title] ?? row[primaryKeys[0].column_name])
+    (row[primaryKeys[0][pkIdOrTitleKey]] ?? row[primaryKeys[0].column_name])
   );
 }
 
@@ -330,6 +342,9 @@ export const isPrimitiveType = (val) =>
   typeof val === 'string' || typeof val === 'number';
 
 export function transformObject(value, idToAliasMap) {
+  if (ncIsNullOrUndefined(value)) {
+    return value;
+  }
   const result = {};
   Object.entries(value).forEach(([k, v]) => {
     const btAlias = idToAliasMap[k];
@@ -344,13 +359,32 @@ export function transformObject(value, idToAliasMap) {
 
 export function extractSortsObject(
   context: NcContext,
-  _sorts: string | string[],
+  _sorts: string | string[] | { direction: string; field: string }[],
   aliasColObjMap: { [columnAlias: string]: Column },
   throwErrorIfInvalid = false,
+  apiVersion?: NcApiVersion,
 ): Sort[] {
   if (!_sorts?.length) return;
+  // Handle API V3 format: [{"direction": "asc", "field": "field_name"}, {"direction": "desc", "field": "field_id"}]
+  if (apiVersion === NcApiVersion.V3) {
+    try {
+      _sorts = JSON.parse(_sorts as string);
+    } catch (_e) {}
+    if (!Array.isArray(_sorts)) _sorts = [_sorts];
+    return (_sorts as { direction: string; field: string }[]).map((s) => {
+      const sort: SortType = {
+        direction: s.direction as 'asc' | 'desc' | 'count-desc' | 'count-asc',
+        fk_column_id: aliasColObjMap[s.field]?.id,
+      };
+      if (throwErrorIfInvalid && !sort.fk_column_id) {
+        NcError.get(context).fieldNotFound(s.field);
+      }
+      return new Sort(sort);
+    });
+  }
 
-  let sorts = _sorts;
+  // Handle V2 format
+  let sorts = _sorts as string | string[];
   if (!Array.isArray(sorts)) sorts = sorts.split(/\s*,\s*/);
 
   return sorts.map((s) => {
