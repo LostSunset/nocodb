@@ -14,10 +14,11 @@ export enum MigrationJobTypes {
   Thumbnail = 'thumbnail',
   RecoverLinks = 'recover-links',
   CleanupDuplicateColumns = 'cleanup-duplicate-columns',
-  OrderColumnCreation = 'order-column-creation',
   NoOpMigration = 'no-op-migration',
+  OrderColumnCreation = 'order-column-creation',
   RecoverOrderColumnMigration = 'recover-order-column-migration',
   RecoverDisconnectedTableNames = 'recover-disconnected-table-names',
+  AuditMigration = 'audit-migration',
 }
 
 export enum JobTypes {
@@ -168,6 +169,7 @@ export interface HandleWebhookJobData extends JobData {
   hookId: string;
   modelId: string;
   viewId: string;
+  hookName: string;
   prevData;
   newData;
 }

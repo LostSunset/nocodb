@@ -67,7 +67,10 @@ import * as nc_077_column_index_name from '~/meta/migrations/v2/nc_077_column_in
 import * as nc_078_mcp_tokens from '~/meta/migrations/v2/nc_078_mcp_tokens';
 import * as nc_079_cross_base_link from '~/meta/migrations/v2/nc_079_cross_base_link';
 import * as nc_080_sync_mappings from '~/meta/migrations/v2/nc_080_sync_mappings';
+import * as nc_081_audit from '~/meta/migrations/v2/nc_081_audit';
 import * as nc_082_row_color_conditions from '~/meta/migrations/v2/nc_082_row_color_conditions';
+import * as nc_083_permissions from '~/meta/migrations/v2/nc_083_permissions';
+import * as nc_084_hook_trigger_fields from '~/meta/migrations/v2/nc_084_hook_trigger_fields';
 
 // Create a custom migration source class
 export default class XcMigrationSourcev2 {
@@ -146,7 +149,10 @@ export default class XcMigrationSourcev2 {
       'nc_078_mcp_tokens',
       'nc_079_cross_base_link',
       'nc_080_sync_mappings',
+      'nc_081_audit',
       'nc_082_row_color_conditions',
+      'nc_083_permissions',
+      'nc_084_hook_trigger_fields',
     ]);
   }
 
@@ -294,8 +300,14 @@ export default class XcMigrationSourcev2 {
         return nc_079_cross_base_link;
       case 'nc_080_sync_mappings':
         return nc_080_sync_mappings;
+      case 'nc_081_audit':
+        return nc_081_audit;
       case 'nc_082_row_color_conditions':
         return nc_082_row_color_conditions;
+      case 'nc_083_permissions':
+        return nc_083_permissions;
+      case 'nc_084_hook_trigger_fields':
+        return nc_084_hook_trigger_fields;
     }
   }
 }
