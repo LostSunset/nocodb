@@ -16,6 +16,7 @@ import {
   type UserType,
   type ViewType,
   type ViewTypes,
+  ProjectRoles,
 } from 'nocodb-sdk'
 import type { Composer, I18n } from 'vue-i18n'
 import type { Theme as AntTheme } from 'ant-design-vue/es/config-provider'
@@ -209,6 +210,7 @@ type NcProject = BaseType & {
   starred?: boolean
   uuid?: string
   users?: User[]
+  default_role?: ProjectRoles | string
 }
 
 interface UndoRedoAction {
@@ -253,6 +255,8 @@ interface Users {
   role: Roles
   invitationToken?: string
 }
+
+type ProjectPageType = 'overview' | 'collaborator' | 'data-source' | 'base-settings' | 'syncs' | 'permissions'
 
 type ViewPageType = 'view' | 'webhook' | 'api' | 'field' | 'relation' | 'permissions'
 
@@ -850,6 +854,7 @@ export type {
   Group,
   GroupNestedIn,
   Users,
+  ProjectPageType,
   ViewPageType,
   NcButtonSize,
   SidebarTableNode,

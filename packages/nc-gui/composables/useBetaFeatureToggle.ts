@@ -1,6 +1,3 @@
-import { onMounted, ref } from 'vue'
-import { createSharedComposable } from '@vueuse/core'
-
 import rfdc from 'rfdc'
 
 const deepClone = rfdc()
@@ -47,15 +44,6 @@ const FEATURES = [
     enabled: false,
     version: 1,
     isEngineering: true,
-  },
-  {
-    id: 'payment',
-    title: 'Payment Flows',
-    description: 'Enable NocoDB Payment Flows.',
-    enabled: false,
-    version: 1,
-    isEngineering: true,
-    isEE: true,
   },
   {
     id: 'ai_features',
@@ -219,7 +207,6 @@ export const useBetaFeatureToggle = createSharedComposable(() => {
       }))
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(featuresToSave))
-      window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY }))
     } catch (error) {
       console.error('Failed to save features:', error)
     }
@@ -285,22 +272,6 @@ export const useBetaFeatureToggle = createSharedComposable(() => {
 
     saveFeatures()
   }
-
-  const handleStorageEvent = (event: StorageEvent) => {
-    if (event.key === STORAGE_KEY && event.newValue !== null) {
-      if (JSON.parse(event.newValue) !== features.value) {
-        initializeFeatures()
-      }
-    }
-  }
-
-  onMounted(() => {
-    window.addEventListener('storage', handleStorageEvent)
-  })
-
-  onUnmounted(() => {
-    window.removeEventListener('storage', handleStorageEvent)
-  })
 
   return {
     features,

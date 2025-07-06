@@ -186,10 +186,10 @@ const overlayStyle = ref<Record<string, any> | null>(null)
 const openAggregationField = ref<CanvasGridColumn | null>(null)
 const openAddNewRowDropdown = ref<Array<number> | null>(null)
 const openColumnDropdownField = ref<ColumnType | null>(null)
-const isDropdownVisible = ref(false)
+const _isDropdownVisible = ref(false)
 const contextMenuTarget = ref<{ row: number; col: number; path: Array<number> } | null>(null)
 const _isContextMenuOpen = ref(false)
-const isCreateOrEditColumnDropdownOpen = ref(false)
+const _isCreateOrEditColumnDropdownOpen = ref(false)
 const columnEditOrAddProviderRef = ref()
 const editColumn = ref<ColumnType | null>(null)
 const lastOpenColumnDropdownField = ref<ColumnType | null>(null)
@@ -402,6 +402,34 @@ function setCursor(cursor: CursorType, customCondition?: (prevValue: CursorType)
 }
 
 // Computed
+const isDropdownVisible = computed({
+  get() {
+    return _isDropdownVisible.value
+  },
+  set(value) {
+    // block closing editOrAddMenu if it needs to be keep open
+    // for example while saving/updating column it needs to be in open state to avoid partial save
+    if (!value && _isCreateOrEditColumnDropdownOpen.value && columnEditOrAddProviderRef.value?.shouldKeepModalOpen()) {
+      return
+    }
+    _isDropdownVisible.value = value
+  },
+})
+
+const isCreateOrEditColumnDropdownOpen = computed({
+  get() {
+    return _isCreateOrEditColumnDropdownOpen.value
+  },
+  set(value) {
+    // block closing editOrAddMenu if it needs to be keep open
+    // for example while saving/updating column it needs to be in open state to avoid partial save
+    if (!value && columnEditOrAddProviderRef.value?.shouldKeepModalOpen()) {
+      return
+    }
+    _isCreateOrEditColumnDropdownOpen.value = value
+  },
+})
+
 const noPadding = computed(() => paddingLessUITypes.has(editEnabled.value?.column.uidt as UITypes))
 
 const containerRef = computed(() => scroller.value?.wrapperRef)
@@ -957,7 +985,10 @@ async function handleMouseDown(e: MouseEvent) {
   editColumn.value = null
   columnOrder.value = null
   isCreateOrEditColumnDropdownOpen.value = false
-  overlayStyle.value = null
+  // skip resetting if add/edit column still visible
+  if (!isCreateOrEditColumnDropdownOpen.value) {
+    overlayStyle.value = null
+  }
   contextMenuTarget.value = null
   prevActiveCell = null
 
@@ -1266,9 +1297,9 @@ async function handleMouseUp(e: MouseEvent, _elementMap: CanvasElement) {
           return
         } else {
           const columnWidth = parseCellWidth(clickedColumn.width)
-          const iconOffsetX = xOffset + columnWidth - 24
+          const iconOffsetX = xOffset + columnWidth - 24 + groupByColumns.value.length * 13
           // check if clicked on the column menu icon
-          if (y <= 21 && y >= 9 && iconOffsetX <= x && iconOffsetX + 14 >= x) {
+          if (iconOffsetX <= x && iconOffsetX + 14 >= x) {
             if (isFieldNotEditable) return
 
             // if menu already in open state then close it on second click
@@ -1339,7 +1370,7 @@ async function handleMouseUp(e: MouseEvent, _elementMap: CanvasElement) {
     // If the click is not normal single click, return
     const { column: clickedColumn, xOffset } = findClickedColumn(x, scrollLeft.value)
 
-    if (clickedColumn) {
+    if (clickedColumn && clickedColumn.id !== 'row_number') {
       // if clicked on same aggregation field, close the dropdown
       if (
         prevMenuState.isDropdownVisible &&
@@ -1925,8 +1956,16 @@ const handleMouseMove = (e: MouseEvent) => {
 }
 
 const handleMouseLeave = () => {
-  activeCursor.value = 'auto'
+  setCursor('auto')
   hideTooltip()
+
+  // Reset hover row on mouse leave from canvas
+  hoverRow.value = {
+    path: [],
+    rowIndex: -2,
+  }
+
+  requestAnimationFrame(triggerRefreshCanvas)
 }
 
 const reloadViewDataHookHandler = withLoading(async (params) => {
@@ -2623,6 +2662,7 @@ defineExpose({
         }`"
         placement="bottomRight"
         @visible-change="onVisibilityChange"
+        @update:visible="onVisibilityChange"
       >
         <div
           v-if="openColumnDropdownField || isCreateOrEditColumnDropdownOpen || openAggregationField || openAddNewRowDropdown"

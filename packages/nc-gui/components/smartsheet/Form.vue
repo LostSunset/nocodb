@@ -51,7 +51,7 @@ const { isUIAllowed } = useRoles()
 
 const { metas, getMeta } = useMetas()
 
-const { base } = storeToRefs(useBase())
+const { base, showBaseAccessRequestOverlay } = storeToRefs(useBase())
 
 const { getPossibleAttachmentSrc } = useAttachment()
 
@@ -1063,7 +1063,7 @@ const { message: templatedMessage } = useTemplatedMessage(
                                     :feature="PlanFeatureTypes.FEATURE_FORM_CUSTOM_LOGO"
                                     :content="
                                       $t('upgrade.upgradeToAddCustomBannerSubtitle', {
-                                        plan: getPlanTitle(PlanTitles.TEAM),
+                                        plan: getPlanTitle(PlanTitles.PLUS),
                                       })
                                     "
                                   />
@@ -1181,7 +1181,7 @@ const { message: templatedMessage } = useTemplatedMessage(
                                           :feature="PlanFeatureTypes.FEATURE_FORM_CUSTOM_LOGO"
                                           :content="
                                             $t('upgrade.upgradeToAddCustomLogoSubtitle', {
-                                              plan: getPlanTitle(PlanTitles.TEAM),
+                                              plan: getPlanTitle(PlanTitles.PLUS),
                                             })
                                           "
                                           class="-my-1"
@@ -1865,7 +1865,7 @@ const { message: templatedMessage } = useTemplatedMessage(
                                     :feature="PlanFeatureTypes.FEATURE_HIDE_BRANDING"
                                     :content="
                                       $t('upgrade.upgradeToHideFormBrandingSubtitle', {
-                                        plan: getPlanTitle(PlanTitles.TEAM),
+                                        plan: getPlanTitle(PlanTitles.PLUS),
                                       })
                                     "
                                   />
@@ -1940,7 +1940,7 @@ const { message: templatedMessage } = useTemplatedMessage(
                                       :feature="PlanFeatureTypes.FEATURE_FORM_URL_REDIRECTION"
                                       :content="
                                         $t('upgrade.upgradeToAddRedirectUrlSubtitle', {
-                                          plan: getPlanTitle(PlanTitles.TEAM),
+                                          plan: getPlanTitle(PlanTitles.PLUS),
                                         })
                                       "
                                     />
@@ -2081,7 +2081,7 @@ const { message: templatedMessage } = useTemplatedMessage(
       </div>
     </template>
     <div
-      v-if="user?.base_roles?.viewer || user?.base_roles?.commenter"
+      v-if="!showBaseAccessRequestOverlay && (user?.base_roles?.viewer || user?.base_roles?.commenter)"
       class="absolute inset-0 bg-black/40 z-500 grid place-items-center"
     >
       <div class="text-center bg-white px-6 py-8 rounded-xl max-w-lg">
