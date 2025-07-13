@@ -253,13 +253,13 @@ const handleClose = (e: MouseEvent) => {
 
 useEventListener(document, 'click', handleClose, true)
 
-// search with email
-const filterOption = (input: string, option: any) => {
+// search with email or display_name
+const filterOption = (input: string, option: any): boolean => {
   const opt = options.value.find((o) => o.id === option.value)
-  const searchVal = opt?.display_name || opt?.email
-  if (searchVal) {
-    return searchVal.toLowerCase().includes(input.toLowerCase())
-  }
+  if (!opt) return false
+
+  const inputLower = input.toLowerCase()
+  return opt.display_name?.toLowerCase().includes(inputLower) || opt.email?.toLowerCase().includes(inputLower)
 }
 
 // check if user is part of the base
@@ -295,11 +295,15 @@ const isExpandedForm = inject(IsExpandedFormOpenInj, ref(false))
 const isCanvasInjected = inject(IsCanvasInjectionInj, false)
 const isGrid = inject(IsGridInj, ref(false))
 const isUnderLookup = inject(IsUnderLookupInj, ref(false))
-
+const canvasCellEventData = inject(CanvasCellEventDataInj, reactive<CanvasCellEventDataInjType>({}))
 onMounted(() => {
   if (isGrid.value && isCanvasInjected && !isExpandedForm.value && !isEditColumn.value && !isUnderLookup.value) {
     forcedNextTick(() => {
       onFocus()
+      const key = canvasCellEventData.keyboardKey
+      if (key && isSinglePrintableKey(key)) {
+        searchVal.value = key
+      }
     })
   }
 })
@@ -394,6 +398,7 @@ onMounted(() => {
         isInFilter ? '!min-w-256px nc-dropdown-user-select-cell-filter' : '!min-w-156px'
       }  ${isOpen ? 'active' : ''}`"
       :filter-option="filterOption"
+      :search-value="searchVal ?? ''"
       @search="search"
       @focus="onFocus"
       @blur="isOpen = false"

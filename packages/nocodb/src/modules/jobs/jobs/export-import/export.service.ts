@@ -1,35 +1,25 @@
 import { Readable } from 'stream';
+import { Injectable } from '@nestjs/common';
+import debug from 'debug';
 import {
   isCrossBaseLink,
   isLinksOrLTAR,
   isSystemColumn,
   LongTextAiMetaProp,
+  NcApiVersion,
   RelationTypes,
   UITypes,
   ViewTypes,
 } from 'nocodb-sdk';
 import { unparse } from 'papaparse';
-import debug from 'debug';
-import { Injectable } from '@nestjs/common';
-import { NcApiVersion } from 'nocodb-sdk';
 import { elapsedTime, initTime } from '../../helpers';
 import type { LookupType, RollupType } from 'nocodb-sdk';
 import type { BaseModelSqlv2 } from '~/db/BaseModelSqlv2';
 import type { NcContext } from '~/interface/config';
-import type { LinkToAnotherRecordColumn } from '~/models';
-import { Script } from '~/models';
-import { RowColorViewHelpers } from '~/helpers/rowColorViewHelpers';
-import {
-  Base,
-  BaseUser,
-  Comment,
-  Filter,
-  Hook,
-  Model,
-  Source,
-  View,
-} from '~/models';
-import NcConnectionMgrv2 from '~/utils/common/NcConnectionMgrv2';
+import type { Column, LinkToAnotherRecordColumn } from '~/models';
+import type RowColorCondition from '~/models/RowColorCondition';
+import type { GetRowColorConditionsResult } from '~/helpers/rowColorViewHelpers';
+import { NcError } from '~/helpers/catchError';
 import {
   getViewAndModelByAliasOrId,
   serializeCellValue,
@@ -40,8 +30,20 @@ import {
   getEntityIdentifier,
 } from '~/helpers/exportImportHelpers';
 import NcPluginMgrv2 from '~/helpers/NcPluginMgrv2';
-import { NcError } from '~/helpers/catchError';
+import { RowColorViewHelpers } from '~/helpers/rowColorViewHelpers';
+import {
+  Base,
+  BaseUser,
+  Comment,
+  Filter,
+  Hook,
+  Model,
+  Script,
+  Source,
+  View,
+} from '~/models';
 import { DatasService } from '~/services/datas.service';
+import NcConnectionMgrv2 from '~/utils/common/NcConnectionMgrv2';
 import { parseMetaProp } from '~/utils/modelUtils';
 
 @Injectable()
@@ -73,6 +75,7 @@ export class ExportService {
       modelIds: string[];
       excludeViews?: boolean;
       excludeHooks?: boolean;
+      excludeRowColorConditions?: boolean;
       excludeData?: boolean;
       excludeComments?: boolean;
       compatibilityMode?: boolean;
@@ -83,6 +86,7 @@ export class ExportService {
     const excludeData = param?.excludeData || false;
     const excludeViews = param?.excludeViews || false;
     const excludeHooks = param?.excludeHooks || false;
+    const excludeRowColorConditions = param?.excludeRowColorConditions || false;
     const excludeComments =
       param?.excludeComments || param?.excludeData || false;
 
@@ -405,14 +409,24 @@ export class ExportService {
         }
       }
 
-      const serializedRowColorConditions =
-        await RowColorViewHelpers.withContext(
+      let serializedRowColorConditions: {
+        result: GetRowColorConditionsResult;
+        filters: Filter[];
+        rowColorConditions: RowColorCondition[];
+      } = {
+        result: [],
+        filters: [],
+        rowColorConditions: [],
+      };
+      if (!excludeRowColorConditions) {
+        serializedRowColorConditions = await RowColorViewHelpers.withContext(
           context,
         ).getDuplicateRowColorConditions({
           views: model.views,
           idMap,
           mapColumnId: true,
         });
+      }
 
       const serializedHooks = [];
 
@@ -667,12 +681,13 @@ export class ExportService {
           .map((c) => c.title)
       : model.columns.filter((c) => !isLinksOrLTAR(c)).map((c) => c.title);
 
+    const refView = view ?? (await View.getDefaultView(context, model.id));
+
+    const viewCols = await refView.getColumns(context);
     if (dataExportMode) {
       const hideSystemFields = view.show_system_fields
         ? []
         : model.columns.filter((c) => isSystemColumn(c)).map((c) => c.id);
-
-      const viewCols = await view.getColumns(context);
 
       fields = viewCols
         .sort((a, b) => a.order - b.order)
@@ -784,6 +799,10 @@ export class ExportService {
     };
 
     const formatAndSerialize = async (data: any) => {
+      const includedColumns: {
+        col: Column;
+        viewOrder: number;
+      }[] = [];
       for (const row of data) {
         for (const [k, v] of Object.entries(row)) {
           const col = model.columns.find((c) => c.title === k);
@@ -793,10 +812,26 @@ export class ExportService {
               column: col,
               siteUrl: param.ncSiteUrl,
             });
+            includedColumns.push({
+              col,
+              viewOrder:
+                viewCols.find((vCol) => vCol.fk_column_id === col.id)?.order ??
+                includedColumns.length + 1,
+            });
           }
         }
       }
-      return { data };
+      const orderedColumns = includedColumns.sort(
+        (a, b) => a.viewOrder - b.viewOrder,
+      );
+      return {
+        data: data.map((row) => {
+          return orderedColumns.reduce((acc, cur) => {
+            acc[cur.col.title] = row[cur.col.title];
+            return acc;
+          }, {});
+        }),
+      };
     };
 
     const baseModel = await Model.getBaseModelSQL(context, {

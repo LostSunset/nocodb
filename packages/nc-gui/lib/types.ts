@@ -8,6 +8,7 @@ import {
   type PaginatedType,
   type PermissionEntity,
   type PermissionKey,
+  type ProjectRoles,
   type PublicAttachmentScope,
   type Roles,
   type RolesObj,
@@ -16,7 +17,6 @@ import {
   type UserType,
   type ViewType,
   type ViewTypes,
-  ProjectRoles,
 } from 'nocodb-sdk'
 import type { Composer, I18n } from 'vue-i18n'
 import type { Theme as AntTheme } from 'ant-design-vue/es/config-provider'

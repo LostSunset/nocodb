@@ -290,7 +290,7 @@ export default class Model implements TableType {
       source_id,
     }: {
       base_id: string;
-      source_id: string;
+      source_id?: string;
     },
     ncMeta = Noco.ncMeta,
   ): Promise<Model[]> {
@@ -764,7 +764,7 @@ export default class Model implements TableType {
     const dbDataWrapper = dataWrapper(data);
     for (const col of columns || (await this.getColumns(context))) {
       if (isVirtualCol(col)) continue;
-      let val = dbDataWrapper.getByTitleOrId(col);
+      let val = dbDataWrapper.getByColumnNameTitleOrId(col);
       if (val !== undefined) {
         if (col.uidt === UITypes.Attachment && typeof val !== 'string') {
           val = JSON.stringify(val);

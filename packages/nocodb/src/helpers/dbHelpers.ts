@@ -620,34 +620,45 @@ export const validateFuncOnColumn = async ({
   }
 };
 
-export const isFilterValueConsistOf = (
-  filterValue: any,
+export const isFilterValueConsistOf = <T extends string | string[]>(
+  filterValue: T,
   needle: string,
   option?: {
     replace?: string;
   },
-) => {
+): { exists: boolean; value?: T } => {
   const evalNeedle = needle.toLowerCase().trim();
+
   if (Array.isArray(filterValue)) {
-    const result = filterValue.find(
-      (k) => k.toLowerCase().trim() === evalNeedle,
-    );
+    const arr = filterValue as string[];
+    const result = arr.some((k) => k.toLowerCase().trim() === evalNeedle);
+
     if (result && option?.replace) {
-      filterValue.map((k) => k.replace(evalNeedle, option.replace));
+      const replaced = arr.map((k) =>
+        k.toLowerCase().trim() === evalNeedle ? option.replace! : k,
+      );
+      return { exists: true, value: replaced as T };
     }
-    return { exists: result, value: filterValue };
-  } else if (typeof filterValue === 'string') {
-    const result = filterValue
-      .split(',')
-      .find((k) => k.toLowerCase().trim() === evalNeedle);
-    if (result && option?.replace) {
-      filterValue = filterValue
-        .split(',')
-        .map((k) => k.replace(evalNeedle, option.replace))
-        .join(',');
-    }
+
     return { exists: result, value: filterValue };
   }
+
+  if (typeof filterValue === 'string') {
+    const parts = filterValue.split(',');
+    const result = parts.some((k) => k.toLowerCase().trim() === evalNeedle);
+
+    if (result && option?.replace) {
+      const replaced = parts
+        .map((k) =>
+          k.toLowerCase().trim() === evalNeedle ? option.replace! : k,
+        )
+        .join(',');
+      return { exists: true, value: replaced as T };
+    }
+
+    return { exists: result, value: filterValue };
+  }
+
   return { exists: false };
 };
 
@@ -668,17 +679,24 @@ export function generateRecursiveCTE(_params: {
 
 export const dataWrapper = (data: any) => {
   return {
-    getByTitleOrId: (column: { id: string; title: string }) => {
-      return data?.[column.title] ?? data?.[column.id];
-    },
     getByColumnNameTitleOrId: (column: {
       column_name: string;
       id: string;
       title: string;
     }) => {
-      return (
-        data?.[column.column_name] ?? data?.[column.title] ?? data?.[column.id]
-      );
+      if (column.column_name in data) {
+        return data[column.column_name];
+      }
+
+      if (column.title in data) {
+        return data[column.title];
+      }
+
+      if (column.id in data) {
+        return data[column.id];
+      }
+
+      return undefined;
     },
     getColumnKeyName: (column: {
       column_name: string;

@@ -60,7 +60,7 @@
   ],
   "servers": [
     {
-      "url": "http://localhost:8080"
+      "url": "https://app.nocodb.com"
     }
   ],
   "paths": {
@@ -16260,7 +16260,7 @@
                       "teleEnabled": false,
                       "errorReportingEnabled": true,
                       "auditEnabled": true,
-                      "ncSiteUrl": "http://localhost:8080",
+                      "ncSiteUrl": "https://app.nocodb.com",
                       "ee": false,
                       "ncAttachmentFieldSize": 20971520,
                       "ncMaxAttachmentsAllowed": 10
@@ -16358,7 +16358,7 @@
                       "teleEnabled": false,
                       "errorReportingEnabled": true,
                       "auditEnabled": true,
-                      "ncSiteUrl": "http://localhost:8080",
+                      "ncSiteUrl": "https://app.nocodb.com",
                       "ee": false,
                       "ncAttachmentFieldSize": 20971520,
                       "ncMaxAttachmentsAllowed": 10,
@@ -22304,6 +22304,10 @@
           "fk_column_id": {
             "$ref": "#/components/schemas/StringOrNull",
             "description": "Foreign Key to Column"
+          },
+          "fk_widget_id": {
+            "$ref": "#/components/schemas/StringOrNull",
+            "description": "Foreign Key to Widget"
           },
           "fk_parent_id": {
             "$ref": "#/components/schemas/StringOrNull",

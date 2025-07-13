@@ -111,7 +111,7 @@ export const PlanMeta = {
     color: '#FAF5FF',
     accent: '#FEB0E8',
     primary: '#972377',
-    bgLight: '#FAF5FF',
+    bgLight: '#FFEEFB',
     bgDark: '#FED8F4',
     border: '#FEB0E8',
     chartFillColor: '#972377',
@@ -151,7 +151,7 @@ export const HigherPlan = {
 
 export const GRACE_PERIOD_DURATION = 14;
 
-export const LOYALTY_GRACE_PERIOD_END_DATE = '2025-05-30';
+export const LOYALTY_GRACE_PERIOD_END_DATE = '2025-07-31';
 
 export const SEAT_PRICE_CAP = 9;
 
